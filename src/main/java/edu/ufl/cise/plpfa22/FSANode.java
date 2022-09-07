@@ -1,14 +1,18 @@
 package edu.ufl.cise.plpfa22;
 
+import edu.ufl.cise.plpfa22.IToken.Kind;
+
 import java.util.*;
 
 public class FSANode {
     private final Map<Character, List<FSANode>> next;
     private final boolean isAccepting;
+    private final Kind kind;
 
-    public FSANode(boolean isAccepting) {
+    public FSANode(boolean isAccepting, Kind kind) {
         this.next = new HashMap<>();
         this.isAccepting = isAccepting;
+        this.kind = kind;
     }
 
     public void addTransition(final char ch, final FSANode nextTransition) {
@@ -24,5 +28,9 @@ public class FSANode {
 
     public boolean isAccepting() {
         return isAccepting;
+    }
+
+    public Kind getKind() {
+        return kind;
     }
 }

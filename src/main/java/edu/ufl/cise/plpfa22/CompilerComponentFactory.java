@@ -11,6 +11,6 @@ public class CompilerComponentFactory {
 	}
 
 	private static FSA getLanguageFSA() {
-
+		return null;
 	}
 }

@@ -93,4 +93,5 @@ public interface IToken {
 	 */
 	public String getStringValue();
 
+	public int length();
 }
