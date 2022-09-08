@@ -4,13 +4,22 @@
 
 package edu.ufl.cise.plpfa22;
 
+import static edu.ufl.cise.plpfa22.IToken.Kind.*;
+
 public class CompilerComponentFactory {
 
 	public static ILexer getLexer(String input) {
-		return new Lexer(input, getLanguageFSA());
+		return new Lexer(input + "\0", getLanguageFSA());
 	}
 
 	private static FSA getLanguageFSA() {
-		return null;
+		final FSANode start = getEOFFSA();
+		return new FSA(start);
+	}
+
+	private static FSANode getEOFFSA() {
+		final FSANode start = new FSANode(false, EOF);
+		start.addTransition('\0', new FSANode(true, EOF));
+		return start;
 	}
 }
