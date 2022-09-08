@@ -4,6 +4,8 @@
 
 package edu.ufl.cise.plpfa22;
 
+import edu.ufl.cise.plpfa22.IToken.Kind;
+
 import static edu.ufl.cise.plpfa22.IToken.Kind.*;
 
 public class CompilerComponentFactory {
@@ -13,13 +15,10 @@ public class CompilerComponentFactory {
 	}
 
 	private static FSA getLanguageFSA() {
-		final FSANode start = getEOFFSA();
-		return new FSA(start);
-	}
-
-	private static FSANode getEOFFSA() {
-		final FSANode start = new FSANode(false, EOF);
+		final FSANode start = new FSANode(false, null);
 		start.addTransition('\0', new FSANode(true, EOF));
-		return start;
+		start.addTransition('+', new FSANode(true, EOF));
+		start.addTransition('-', new FSANode(true, EOF));
+		return new FSA(start);
 	}
 }
