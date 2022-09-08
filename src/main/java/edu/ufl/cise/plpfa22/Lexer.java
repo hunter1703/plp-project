@@ -45,39 +45,47 @@ public class Lexer implements ILexer {
         } else {
             tokenColumn += len;
         }
+
+        if (nextToken.getKind() == NEW_LINE || nextToken.getKind() == WHITE_SPACE) {
+            return next();
+        }
         return nextToken;
     }
 
     @Override
     public IToken peek() throws LexicalException {
-        final int length = input.length;
-        if (currIndex >= length) {
-            return Token.ofKind(EOF, "\0", null);
-        }
-        int index = currIndex;
-        final StringBuilder sb = new StringBuilder();
-
-        Token possibleToken = null;
-
-        //consume as many characters as you can
-        while (index < length) {
-            final char ch = input[index++];
-            sb.append(ch);
-            final List<Kind> longerTokenKinds = fsa.advance(ch);
-            //FSA did not advance to new states
-            if (!fsa.advanced()) {
-                if (possibleToken == null) {
-                    throw new LexicalException();
-                }
-                //return longest token recognized yet
-                return possibleToken;
-            } else if (!longerTokenKinds.isEmpty()) {
-                //longer tokens recognized; spit out tokens based on priority (e.g. keywords are higher priority than identifiers)
-                final Kind kind = getHighestPriority(longerTokenKinds);
-                possibleToken = Token.ofKind(kind, sb.toString(), new SourceLocation(tokenLine, tokenColumn));
+        try {
+            final int length = input.length;
+            if (currIndex >= length) {
+                return Token.ofKind(EOF, "\0", null);
             }
+            int index = currIndex;
+            final StringBuilder sb = new StringBuilder();
+
+            Token possibleToken = null;
+
+            //consume as many characters as you can
+            while (index < length) {
+                final char ch = input[index++];
+                sb.append(ch);
+                final List<Kind> longerTokenKinds = new ArrayList<>(fsa.advance(ch));
+                //FSA did not advance to new states
+                if (!fsa.advanced()) {
+                    if (possibleToken == null) {
+                        throw new LexicalException();
+                    }
+                    //return longest token recognized yet
+                    return possibleToken;
+                } else if (!longerTokenKinds.isEmpty()) {
+                    //longer tokens recognized; spit out tokens based on priority (e.g. keywords are higher priority than identifiers)
+                    final Kind kind = getHighestPriority(longerTokenKinds);
+                    possibleToken = Token.ofKind(kind, sb.toString(), new SourceLocation(tokenLine, tokenColumn));
+                }
+            }
+            return possibleToken;
+        } finally {
+            fsa.reset();
         }
-        return possibleToken;
     }
 
     private static Kind getHighestPriority(final List<Kind> allKinds) {

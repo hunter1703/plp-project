@@ -15,11 +15,11 @@ public class FSANode {
         this.kind = kind;
     }
 
-    public void addTransition(final char ch, final FSANode nextTransition) {
+    public void addTransition(final Character ch, final FSANode nextTransition) {
         next.computeIfAbsent(ch, key -> new LinkedList<>()).add(nextTransition);
     }
 
-    public List<FSANode> getNextNodes(final char ch) {
+    public List<FSANode> getNextNodes(final Character ch) {
         if (next.containsKey(ch)) {
             return next.get(ch);
         }

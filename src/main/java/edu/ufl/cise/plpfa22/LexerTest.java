@@ -171,12 +171,74 @@ class LexerTest {
 	public void testIntTooBig() throws LexicalException {
 		String input = """
 				42
+				0
+				10
+				135
+				200
+				257
+				3000
+				379
+				40000
+				426
+				500000
+				538
+				60
+				649
+				700
+				757
+				800
+				88
+				90
+				913
 				99999999999999999999999999999999999999999999999999999999999999999999999
 				""";
-		ILexer lexer = getLexer(input);
-		checkInt(lexer.next(),42);
+		final ILexer lexerOne = getLexer(input);
+		checkInt(lexerOne.next(),42);
+		checkInt(lexerOne.next(),0);
+		checkInt(lexerOne.next(),10);
+		checkInt(lexerOne.next(),135);
+		checkInt(lexerOne.next(),200);
+		checkInt(lexerOne.next(),257);
+		checkInt(lexerOne.next(),3000);
+		checkInt(lexerOne.next(),379);
+		checkInt(lexerOne.next(),40000);
+		checkInt(lexerOne.next(),426);
+		checkInt(lexerOne.next(),500000);
+		checkInt(lexerOne.next(),538);
+		checkInt(lexerOne.next(),60);
+		checkInt(lexerOne.next(),649);
+		checkInt(lexerOne.next(),700);
+		checkInt(lexerOne.next(),757);
+		checkInt(lexerOne.next(),800);
+		checkInt(lexerOne.next(),88);
+		checkInt(lexerOne.next(),90);
+		checkInt(lexerOne.next(),913);
 		Exception e = assertThrows(LexicalException.class, () -> {
-			lexer.next();			
+			lexerOne.next();
+		});
+
+		input = """
+				0
+				00
+				""";
+		final ILexer lexerTwo = getLexer(input);
+		checkInt(lexerTwo.next(),0);
+
+		//double zeroes not allowed
+		e = assertThrows(LexicalException.class, () -> {
+			lexerTwo.next();
+		});
+
+		input = """
+				0
+				001
+				""";
+		final ILexer lexerThree = getLexer(input);
+		checkInt(lexerThree.next(),0);
+
+		//number starting with zero is not allowed
+		e = assertThrows(LexicalException.class, () -> {
+			lexerThree.next();
 		});
 	}
 	
