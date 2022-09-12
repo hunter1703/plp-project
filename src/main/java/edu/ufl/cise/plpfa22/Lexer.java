@@ -39,14 +39,15 @@ public class Lexer implements ILexer {
         final int len = nextToken.length();
         currIndex += len;
 
-        if (nextToken.getKind() == NEW_LINE) {
+        final Kind kind = nextToken.getKind();
+        if (kind == NEW_LINE) {
             tokenLine++;
             tokenColumn = 1;
         } else {
             tokenColumn += len;
         }
 
-        if (nextToken.getKind() == NEW_LINE || nextToken.getKind() == WHITE_SPACE) {
+        if (kind == NEW_LINE || kind == WHITE_SPACE || kind == COMMENT) {
             return next();
         }
         return nextToken;
@@ -75,6 +76,9 @@ public class Lexer implements ILexer {
                         throw new LexicalException();
                     }
                     //return longest token recognized yet
+                    if (possibleToken.getKind() == NUM_LIT) {
+                        possibleToken.getIntValue();
+                    }
                     return possibleToken;
                 } else if (!longerTokenKinds.isEmpty()) {
                     //longer tokens recognized; spit out tokens based on priority (e.g. keywords are higher priority than identifiers)
@@ -83,6 +87,8 @@ public class Lexer implements ILexer {
                 }
             }
             return possibleToken;
+        } catch (NumberFormatException ex) {
+          throw new LexicalException("Invalid integer");
         } finally {
             fsa.reset();
         }
