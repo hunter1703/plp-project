@@ -7,7 +7,11 @@ package edu.ufl.cise.plpfa22;
 
 import edu.ufl.cise.plpfa22.IToken.Kind;
 
+import javax.print.DocFlavor;
+import javax.xml.stream.events.Characters;
+
 import static edu.ufl.cise.plpfa22.IToken.Kind.*;
+import static edu.ufl.cise.plpfa22.Token.ESCAPED_SYMBOLS;
 
 public class CompilerComponentFactory {
 
@@ -54,6 +58,7 @@ public class CompilerComponentFactory {
         start.addTransition(null, getIntFSA());
         start.addTransition(null, getIdentifierFSA());
         start.addTransition(null, getStringLiteralFSA());
+        start.addTransition(null, getCommentFSA());
 
         return new FSA(start);
     }
@@ -68,9 +73,9 @@ public class CompilerComponentFactory {
         final FSANode start = new FSANode(false, kind);
         final char[] input = str.toCharArray();
         FSANode prevNode = start;
-        for (int i = 0; i < input.length; i++) {
+        for (char c : input) {
             final FSANode newNode = new FSANode(true, kind);
-            prevNode.addTransition(input[i], newNode);
+            prevNode.addTransition(c, newNode);
             prevNode = newNode;
         }
         return start;
@@ -123,20 +128,53 @@ public class CompilerComponentFactory {
 
     private static FSANode getStringLiteralFSA() {
         final FSANode start = new FSANode(false, STRING_LIT);
-        final FSANode openingQuote = new FSANode(true, STRING_LIT);
-        start.addTransition('"', openingQuote);
+        final FSANode openingQuotes = new FSANode(false, STRING_LIT);
+        start.addTransition('"', openingQuotes);
 
-        final FSANode escapeChar = new FSANode(true, STRING_LIT);
-        openingQuote.addTransition('\\', escapeChar);
-        for (char c : "btnfr\"'\\".toCharArray()) {
-            final FSANode newNode = new FSANode(true, STRING_LIT);
-            escapeChar.addTransition(c, newNode);
-            newNode.addTransition(null, openingQuote);
+        final FSANode closingQuotes = new FSANode(true, STRING_LIT);
+        openingQuotes.addTransition('"', closingQuotes);
+
+        //escape branch
+        final FSANode escape = new FSANode(false, STRING_LIT);
+        openingQuotes.addTransition(null, escape);
+
+        final FSANode escapeSlash = new FSANode(false, STRING_LIT);
+        escape.addTransition('\\', escapeSlash);
+
+        for (char c : ESCAPED_SYMBOLS) {
+            escapeSlash.addTransition(c, openingQuotes);
         }
 
-        final FSANode closingQuote = new FSANode(true, STRING_LIT);
-        openingQuote.addTransition('"', closingQuote);
+        //other chars branch
+        final FSANode otherNode = new FSANode(false, STRING_LIT);
+        openingQuotes.addTransition(null, otherNode);
 
+        for (int i = Character.MIN_VALUE; i <= Character.MAX_VALUE; i++) {
+            final char ch = (char) i;
+            if (ch == '\\' || ch == '"') {
+                continue;
+            }
+            otherNode.addTransition(ch, openingQuotes);
+        }
+        return start;
+    }
+
+    private static FSANode getCommentFSA() {
+        final FSANode start = new FSANode(false, COMMENT);
+        final FSANode commentStart = new FSANode(false, COMMENT);
+        start.addTransition('/', commentStart);
+
+        final FSANode first = new FSANode(false, COMMENT);
+        commentStart.addTransition('/', first);
+        for (int i = Character.MIN_VALUE; i <= Character.MAX_VALUE; i++) {
+            final char ch = (char) i;
+            if (ch == '\n' || ch == '\r') {
+                continue;
+            }
+            first.addTransition(ch, first);
+        }
+        first.addTransition(null, getNewLineFSA());
+        first.addTransition(null, getReservedCharFSA(EOF, '\0'));
         return start;
     }
 
