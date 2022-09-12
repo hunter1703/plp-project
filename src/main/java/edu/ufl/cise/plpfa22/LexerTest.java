@@ -8,6 +8,7 @@ package edu.ufl.cise.plpfa22;
 import edu.ufl.cise.plpfa22.IToken.Kind;
 import org.junit.jupiter.api.Test;
 
+import static edu.ufl.cise.plpfa22.IToken.Kind.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -121,7 +122,7 @@ class LexerTest {
         show(input);
         ILexer lexer = getLexer(input);
         //this check should succeed
-        checkIdent(lexer.next(), "abc");
+        checkIdent(lexer.next(), "abc", 1, 1);
         //this is expected to throw an exception since @ is not a legal
         //character unless it is part of a string or comment
         assertThrows(LexicalException.class, () -> {
@@ -170,7 +171,7 @@ class LexerTest {
                 99999999999999999999999999999999999999999999999999999999999999999999999
                 """;
         final ILexer lexer = getLexer(input);
-        checkInt(lexer.next(), 42);
+        checkInt(lexer.next(), 42, 1, 1);
         assertThrows(LexicalException.class, lexer::next);
     }
 
@@ -201,32 +202,52 @@ class LexerTest {
                 01
                 """;
         final ILexer lexer = getLexer(input);
-        checkInt(lexer.next(), 42);
-        checkInt(lexer.next(), 0);
-        checkInt(lexer.next(), 10);
-        checkInt(lexer.next(), 135);
-        checkInt(lexer.next(), 200);
-        checkInt(lexer.next(), 257);
-        checkInt(lexer.next(), 3000);
-        checkInt(lexer.next(), 379);
-        checkInt(lexer.next(), 40000);
-        checkInt(lexer.next(), 426);
-        checkInt(lexer.next(), 500000);
-        checkInt(lexer.next(), 538);
-        checkInt(lexer.next(), 60);
-        checkInt(lexer.next(), 649);
-        checkInt(lexer.next(), 700);
-        checkInt(lexer.next(), 757);
-        checkInt(lexer.next(), 800);
-        checkInt(lexer.next(), 88);
-        checkInt(lexer.next(), 90);
-        checkInt(lexer.next(), 913);
-        checkInt(lexer.next(), 0);
-        checkInt(lexer.next(), 0);
-        checkInt(lexer.next(), 0);
-        checkInt(lexer.next(), 1);
+        checkInt(lexer.next(), 42, 1, 1);
+        checkInt(lexer.next(), 0, 2, 1);
+        checkInt(lexer.next(), 10, 3, 1);
+        checkInt(lexer.next(), 135, 4, 1);
+        checkInt(lexer.next(), 200, 5, 1);
+        checkInt(lexer.next(), 257, 6, 1);
+        checkInt(lexer.next(), 3000, 7, 1);
+        checkInt(lexer.next(), 379, 8, 1);
+        checkInt(lexer.next(), 40000, 9, 1);
+        checkInt(lexer.next(), 426, 10, 1);
+        checkInt(lexer.next(), 500000, 11, 1);
+        checkInt(lexer.next(), 538, 12, 1);
+        checkInt(lexer.next(), 60, 13, 1);
+        checkInt(lexer.next(), 649, 14, 1);
+        checkInt(lexer.next(), 700, 15, 1);
+        checkInt(lexer.next(), 757, 16, 1);
+        checkInt(lexer.next(), 800, 17, 1);
+        checkInt(lexer.next(), 88, 18, 1);
+        checkInt(lexer.next(), 90, 19, 1);
+        checkInt(lexer.next(), 913, 20, 1);
+        checkInt(lexer.next(), 0, 21, 1);
+        checkInt(lexer.next(), 0, 21, 2);
+        checkInt(lexer.next(), 0, 22, 1);
+        checkInt(lexer.next(), 1, 22, 2);
+        checkEOF(lexer.next());
     }
 
+    @Test
+    public void testWhiteSpace() throws LexicalException {
+        String input = "123 \n\r \t\t\r456";
+        show(input);
+        ILexer lexer = getLexer(input);
+        checkToken(lexer.next(), NUM_LIT, 1, 1);
+        checkToken(lexer.next(), NUM_LIT, 2, 6);
+        checkEOF(lexer.next());
+    }
+
+    @Test
+    public void testNewLine() throws LexicalException {
+        String input = "123 \n\r \t\t\r\r\n\n\n 456";
+        show(input);
+        ILexer lexer = getLexer(input);
+        checkToken(lexer.next(), NUM_LIT, 1, 1);
+        checkToken(lexer.next(), NUM_LIT, 5, 2);
+        checkEOF(lexer.next());
+    }
 
     @Test
     public void testEscapeSequences0() throws LexicalException {

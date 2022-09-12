@@ -42,7 +42,6 @@ public class CompilerComponentFactory {
         nextNode.addTransition(null, start);
 
         start.addTransition(' ', nextNode);
-        start.addTransition('\n', nextNode);
         start.addTransition('\r', nextNode);
         start.addTransition('\t', nextNode);
         return start;
@@ -52,13 +51,13 @@ public class CompilerComponentFactory {
         final FSANode start = new FSANode(false, NEW_LINE);
 
         final FSANode one = new FSANode(true, NEW_LINE);
-        final FSANode two = new FSANode(true, NEW_LINE);
+        final FSANode two = new FSANode(false, NEW_LINE);
+        final FSANode three = new FSANode(true, NEW_LINE);
 
         start.addTransition('\n', one);
-        one.addTransition('\r', two);
 
-        one.addTransition(null, start);
-        two.addTransition(null, start);
+        start.addTransition('\r', two);
+        two.addTransition('\n', three);
 
         return start;
     }

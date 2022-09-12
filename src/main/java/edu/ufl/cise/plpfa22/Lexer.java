@@ -39,14 +39,15 @@ public class Lexer implements ILexer {
         final int len = nextToken.length();
         currIndex += len;
 
-        if (nextToken.getKind() == NEW_LINE) {
+        final Kind kind = nextToken.getKind();
+        if (kind == NEW_LINE) {
             tokenLine++;
             tokenColumn = 1;
         } else {
             tokenColumn += len;
         }
 
-        if (nextToken.getKind() == NEW_LINE || nextToken.getKind() == WHITE_SPACE) {
+        if (kind == NEW_LINE || kind == WHITE_SPACE || kind == COMMENT) {
             return next();
         }
         return nextToken;
