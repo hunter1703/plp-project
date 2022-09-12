@@ -75,6 +75,9 @@ public class Lexer implements ILexer {
                         throw new LexicalException();
                     }
                     //return longest token recognized yet
+                    if (possibleToken.getKind() == NUM_LIT) {
+                        possibleToken.getIntValue();
+                    }
                     return possibleToken;
                 } else if (!longerTokenKinds.isEmpty()) {
                     //longer tokens recognized; spit out tokens based on priority (e.g. keywords are higher priority than identifiers)
@@ -83,6 +86,8 @@ public class Lexer implements ILexer {
                 }
             }
             return possibleToken;
+        } catch (NumberFormatException ex) {
+          throw new LexicalException("Invalid integer");
         } finally {
             fsa.reset();
         }

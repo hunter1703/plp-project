@@ -20,13 +20,13 @@ public class CompilerComponentFactory {
     }
 
     private static FSA getLanguageFSA() {
-		final FSANode start = new FSANode(false, null);
-		start.addTransition(null, getReservedCharFSA(EOF, '\0'));
-		start.addTransition(null, getReservedCharFSA(MINUS, '-'));
-		start.addTransition(null, getReservedCharFSA(PLUS, '+'));
-		start.addTransition(null, getWhiteSpaceFSA());
-		start.addTransition(null, getNewLineFSA());
-		start.addTransition(null, getIntFSA());
+        final FSANode start = new FSANode(false, null);
+        start.addTransition(null, getReservedCharFSA(EOF, '\0'));
+        start.addTransition(null, getReservedCharFSA(MINUS, '-'));
+        start.addTransition(null, getReservedCharFSA(PLUS, '+'));
+        start.addTransition(null, getWhiteSpaceFSA());
+        start.addTransition(null, getNewLineFSA());
+        start.addTransition(null, getIntFSA());
         return new FSA(start);
     }
 
@@ -36,51 +36,50 @@ public class CompilerComponentFactory {
         return start;
     }
 
-	private static FSANode getWhiteSpaceFSA() {
-		final FSANode start = new FSANode(false, WHITE_SPACE);
+    private static FSANode getWhiteSpaceFSA() {
+        final FSANode start = new FSANode(false, WHITE_SPACE);
+        final FSANode nextNode = new FSANode(true, WHITE_SPACE);
+        nextNode.addTransition(null, start);
 
-		final FSANode blankNode = new FSANode(true, WHITE_SPACE);
-		final FSANode tabNode = new FSANode(true, WHITE_SPACE);
-		final FSANode newLineNode = new FSANode(true, WHITE_SPACE);
-		final FSANode carriageReturnNode = new FSANode(true, WHITE_SPACE);
+        start.addTransition(' ', nextNode);
+        start.addTransition('\n', nextNode);
+        start.addTransition('\r', nextNode);
+        start.addTransition('\t', nextNode);
+        return start;
+    }
 
-		blankNode.addTransition(null, start);
-		tabNode.addTransition(null, start);
-		newLineNode.addTransition(null, start);
-		carriageReturnNode.addTransition(null, start);
+    private static FSANode getNewLineFSA() {
+        final FSANode start = new FSANode(false, NEW_LINE);
 
-		start.addTransition(' ', blankNode);
-		start.addTransition('\n', newLineNode);
-		start.addTransition('\r', carriageReturnNode);
-		start.addTransition('\t', tabNode);
-		return start;
-	}
+        final FSANode one = new FSANode(true, NEW_LINE);
+        final FSANode two = new FSANode(true, NEW_LINE);
 
-	private static FSANode getNewLineFSA() {
-		final FSANode start = new FSANode(false, NEW_LINE);
+        start.addTransition('\n', one);
+        one.addTransition('\r', two);
 
-		final FSANode one = new FSANode(true, NEW_LINE);
-		final FSANode two = new FSANode(true, NEW_LINE);
+        one.addTransition(null, start);
+        two.addTransition(null, start);
 
-		start.addTransition('\n', one);
-		one.addTransition('\r', two);
+        return start;
+    }
 
-		one.addTransition(null, start);
-		two.addTransition(null, start);
+    private static FSANode getIntFSA() {
+        final FSANode start = new FSANode(false, NUM_LIT);
+        final FSANode zero = new FSANode(true, NUM_LIT);
+        start.addTransition('0', zero);
 
-		return start;
-	}
+        final FSANode first = new FSANode(false, NUM_LIT);
 
-	private static FSANode getIntFSA() {
-		final FSANode start = new FSANode(false, NUM_LIT);
-		final FSANode zero = new FSANode(true, NUM_LIT);
-		start.addTransition('0', zero);
+        for (int i = 1; i <= 9; i++) {
+            start.addTransition(Character.forDigit(i, 10), first);
+        }
 
-		for (int i = 1; i <= 9; i++) {
-			final FSANode node = new FSANode(true, NUM_LIT);
-			start.addTransition(Character.forDigit(i, 10), node);
-			node.addTransition(null, start);
-		}
-		return start;
-	}
+        final FSANode second = new FSANode(true, NUM_LIT);
+        first.addTransition(null, second);
+
+        for (int i = 0; i <= 9; i++) {
+            second.addTransition(Character.forDigit(i, 10), second);
+        }
+        return start;
+    }
 }
