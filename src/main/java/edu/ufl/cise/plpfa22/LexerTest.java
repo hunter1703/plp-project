@@ -14,7 +14,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class LexerTest {
 
-
     /*** Useful functions ***/
     ILexer getLexer(String input) {
         return CompilerComponentFactory.getLexer(input);
@@ -278,4 +277,17 @@ class LexerTest {
     }
 }
 
-
+	//A couple of boolean tokens
+	@Test
+	void testBooleans() throws LexicalException {
+		String input = """
+				TRUE
+				FALSE
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.BOOLEAN_LIT, 1,1);
+		checkToken(lexer.next(), Kind.BOOLEAN_LIT, 2,1);
+		checkEOF(lexer.next());
+	}
+}
