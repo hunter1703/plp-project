@@ -20,8 +20,8 @@ public class StringToken extends Token {
             count++;
         }
         this.numNewLines = count;
-        final int lastIndex = rawText.lastIndexOf("\\n");
-        this.lastLineLen = rawText.length() - (lastIndex >= 0 ? lastIndex + 2 : 0);
+        final int lastIndex = rawText.lastIndexOf("\n");
+        this.lastLineLen = rawText.length() - (lastIndex >= 0 ? lastIndex + 1 : 0);
     }
 
     public int getNumNewLines() {

@@ -425,13 +425,15 @@ class LexerTest {
     @Test
     public void testStringLineNum() throws LexicalException {
         String input = """
-                "Hello\\nWor\\n\\nld" ident
+                "He
+                llo Wo\\nr
+                ld" ident
                 "Hello\\tAgain"
                 """;
         show(input);
         ILexer lexer = getLexer(input);
         // escape char within string affects line number and column number
-        checkString(lexer.next(), "Hello\nWor\n\nld", 1, 1);
+        checkString(lexer.next(), "He\nllo Wo\nr\nld", 1, 1);
         checkIdent(lexer.next(), "ident", 4, 5);
         checkString(lexer.next(), "Hello\tAgain", 5, 1);
         checkEOF(lexer.next());
