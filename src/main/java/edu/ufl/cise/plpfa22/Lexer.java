@@ -11,7 +11,7 @@ public class Lexer implements ILexer {
     private static final Map<Kind, Integer> KIND_VS_PRIORITY = new HashMap<>();
 
     static {
-        final Kind[] allKinds = new Kind[]{EOF, COMMENT, NEW_LINE, WHITE_SPACE, ERROR, DOT, COMMA, SEMI, QUOTE, LPAREN, RPAREN, PLUS, MINUS, TIMES, DIV, MOD, QUESTION, BANG, ASSIGN, EQ, NEQ, LT, LE, GT, GE, KW_CONST, KW_VAR, KW_PROCEDURE, KW_CALL, KW_BEGIN, KW_END, KW_IF, KW_THEN, KW_WHILE, KW_DO, BOOLEAN_LIT, NUM_LIT, IDENT, STRING_LIT};
+        final Kind[] allKinds = new Kind[]{EOF, COMMENT, NEW_LINE, WHITE_SPACE, ERROR, DOT, COMMA, SEMI, LPAREN, RPAREN, PLUS, MINUS, TIMES, DIV, MOD, QUESTION, BANG, ASSIGN, EQ, NEQ, LT, LE, GT, GE, KW_CONST, KW_VAR, KW_PROCEDURE, KW_CALL, KW_BEGIN, KW_END, KW_IF, KW_THEN, KW_WHILE, KW_DO, BOOLEAN_LIT, NUM_LIT, IDENT, STRING_LIT};
         final int num = allKinds.length;
         for (int i = 0; i < num; i++) {
             KIND_VS_PRIORITY.put(allKinds[i], i);
@@ -85,6 +85,9 @@ public class Lexer implements ILexer {
                     final Kind kind = getHighestPriority(longerTokenKinds);
                     possibleToken = Token.ofKind(kind, sb.toString(), new SourceLocation(tokenLine, tokenColumn));
                 }
+            }
+            if (possibleToken == null) {
+                throw new LexicalException();
             }
             return possibleToken;
         } catch (NumberFormatException ex) {

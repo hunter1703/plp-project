@@ -64,6 +64,14 @@ class LexerTest {
         assertEquals(new IToken.SourceLocation(expectedLine, expectedColumn), t.getSourceLocation());
     }
 
+    // check that this token is a STRING_LIT with expected string value and position
+    void checkString(IToken t, String expectedValue, int expectedLine, int expectedColumn) {
+        assertEquals(Kind.STRING_LIT, t.getKind());
+        assertEquals(expectedValue, t.getStringValue());
+        assertEquals(new IToken.SourceLocation(expectedLine,expectedColumn), t.getSourceLocation());
+    }
+
+
     //check that this token is the EOF token
     void checkEOF(IToken t) {
         checkToken(t, Kind.EOF);
@@ -169,6 +177,7 @@ class LexerTest {
                 42
                 99999999999999999999999999999999999999999999999999999999999999999999999
                 """;
+        show(input);
         final ILexer lexer = getLexer(input);
         checkInt(lexer.next(), 42, 1, 1);
         assertThrows(LexicalException.class, lexer::next);
@@ -200,6 +209,7 @@ class LexerTest {
                 00
                 01
                 """;
+        show(input);
         final ILexer lexer = getLexer(input);
         checkInt(lexer.next(), 42, 1, 1);
         checkInt(lexer.next(), 0, 2, 1);
@@ -250,15 +260,15 @@ class LexerTest {
 
     @Test
     public void testEscapeSequences0() throws LexicalException {
-        ILexer lexer = getLexer("\"\\b \\t \\n \\f \\r \"");
+        String input = "\"\\b \\t \\n \\f \\r \"";
+        show(input);
+        ILexer lexer = getLexer(input);
         IToken t = lexer.next();
-//        assertEquals("\b \t \n \f \r ", t.getStringValue());
+        checkString(t, "\b \t \n \f \r ", 1, 1);
         assertEquals("\"\\b \\t \\n \\f \\r \"", String.valueOf(t.getText()));
 
         lexer = getLexer("\"\\b \\z\"");
-        checkToken(lexer.next(), QUOTE);
         assertThrows(LexicalException.class, lexer::next);
-        //"abcd
     }
 
     @Test
@@ -267,9 +277,8 @@ class LexerTest {
         show(input);
         ILexer lexer = getLexer(input);
         IToken t = lexer.next();
-        String val = t.getStringValue();
         String expectedStringValue = " ...  \"  \'  \\  ";
-//        assertEquals(expectedStringValue, val);
+        checkString(t, expectedStringValue, 1, 4);
         String text = String.valueOf(t.getText());
         String expectedText = "\" ...  \\\"  \\\'  \\\\  \""; //almost the same as input, but white space is omitted
         assertEquals(expectedText, text);
@@ -291,5 +300,140 @@ class LexerTest {
         checkToken(lexer.next(), IDENT, 3, 1);
         checkToken(lexer.next(), IDENT, 4, 1);
         checkEOF(lexer.next());
+    }
+
+    // Mix of Identifiers, Number, Comment, Keyword and String literal
+    @Test
+    public void testIDNNUM() throws LexicalException {
+        String input = """
+        df123 345 g546 IF
+        //next is string
+
+         "Hello, World"
+        """;
+        show(input);
+        ILexer lexer = getLexer(input);
+        checkIdent(lexer.next(), "df123", 1,1);
+        checkInt(lexer.next(), 345, 1,7);
+        checkIdent(lexer.next(), "g546", 1,11);
+        checkToken(lexer.next(), Kind.KW_IF, 1,16);
+        checkToken(lexer.next(), Kind.STRING_LIT, 4,2);
+        checkEOF(lexer.next());
+    }
+
+    // All symbols
+    @Test
+    public void testAllSymbols() throws LexicalException {
+        String input ="""
+        . , ; ( ) + - * / %
+        //next is line 3
+        ? ! := = # < <= > >=
+        """;
+        show(input);
+        ILexer lexer = getLexer(input);
+        checkToken(lexer.next(), Kind.DOT, 1,1);
+        checkToken(lexer.next(), Kind.COMMA, 1,3);
+        checkToken(lexer.next(), Kind.SEMI, 1,5);
+        checkToken(lexer.next(), Kind.LPAREN, 1,7);
+        checkToken(lexer.next(), Kind.RPAREN, 1,9);
+        checkToken(lexer.next(), Kind.PLUS, 1,11);
+        checkToken(lexer.next(), Kind.MINUS, 1,13);
+        checkToken(lexer.next(), Kind.TIMES, 1,15);
+        checkToken(lexer.next(), Kind.DIV, 1,17);
+        checkToken(lexer.next(), Kind.MOD, 1,19);
+        checkToken(lexer.next(), Kind.QUESTION, 3,1);
+        checkToken(lexer.next(), Kind.BANG, 3,3);
+        checkToken(lexer.next(), Kind.ASSIGN, 3,5);
+        checkToken(lexer.next(), Kind.EQ, 3,8);
+        checkToken(lexer.next(), Kind.NEQ, 3,10);
+        checkToken(lexer.next(), Kind.LT, 3,12);
+        checkToken(lexer.next(), Kind.LE, 3,14);
+        checkToken(lexer.next(), Kind.GT, 3,17);
+        checkToken(lexer.next(), Kind.GE, 3,19);
+        checkEOF(lexer.next());
+    }
+
+    // All reserved words
+    @Test
+    public void testAllReserved() throws LexicalException {
+        String input ="""
+        CONST VAR PROCEDURE
+             CALL BEGIN END
+                //next is line 3
+                IF THEN WHILE DO
+       
+        """;
+        show(input);
+        ILexer lexer = getLexer(input);
+        checkToken(lexer.next(), Kind.KW_CONST, 1,1);
+        checkToken(lexer.next(), Kind.KW_VAR, 1,7);
+        checkToken(lexer.next(), Kind.KW_PROCEDURE, 1,11);
+        checkToken(lexer.next(), Kind.KW_CALL, 2,6);
+        checkToken(lexer.next(), Kind.KW_BEGIN, 2,11);
+        checkToken(lexer.next(), Kind.KW_END, 2,17);
+        checkToken(lexer.next(), Kind.KW_IF, 4,9);
+        checkToken(lexer.next(), Kind.KW_THEN, 4,12);
+        checkToken(lexer.next(), Kind.KW_WHILE, 4,17);
+        checkToken(lexer.next(), Kind.KW_DO, 4,23);
+        checkEOF(lexer.next());
+    }
+
+    @Test
+    public void testExpression() throws LexicalException {
+        String input ="""
+        12+3
+        """;
+        show(input);
+        ILexer lexer = getLexer(input);
+        checkInt(lexer.next(), 12, 1, 1);
+        checkToken(lexer.next(), Kind.PLUS, 1, 3 );
+        checkInt(lexer.next(), 3, 1, 4);
+        checkEOF(lexer.next());
+    }
+
+    @Test
+    public void testStringLineNumber() throws LexicalException {
+        String input = """
+        "Hello\\n\\b\\"World"
+        "Hello\\tAgain"
+        """;
+        show(input);
+        ILexer lexer = getLexer(input);
+        checkString(lexer.next(), "Hello\n\b\"World", 1, 1);
+        // TODO: check whether the expected line be 2 or should it be 3
+        checkString(lexer.next(), "Hello\tAgain", 2, 1);
+        checkEOF(lexer.next());
+    }
+
+    @Test
+    public void testInvalidIdentifier() throws LexicalException {
+        String input = """
+            $valid_123
+            valid_and_symbol+
+            invalid^
+        """;
+        show(input);
+        ILexer lexer = getLexer(input);
+        checkIdent(lexer.next(), "$valid_123", 1,5);
+        checkIdent(lexer.next(), "valid_and_symbol", 2,5);
+        checkToken(lexer.next(), Kind.PLUS, 2, 21);
+        checkIdent(lexer.next(), "invalid", 3,5);
+        assertThrows(LexicalException.class, lexer::next);
+    }
+
+    @Test
+    public void testUnterminatedString() throws LexicalException {
+        String input = "\"unterminated";
+        show(input);
+        ILexer lexer = getLexer(input);
+        assertThrows(LexicalException.class, lexer::next);
+    }
+
+    @Test
+    public void testInvalidEscapeSequence() throws LexicalException {
+        String input = "\"esc\\\"";
+        show(input);
+        ILexer lexer = getLexer(input);
+        assertThrows(LexicalException.class, lexer::next);
     }
 }

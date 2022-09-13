@@ -1,7 +1,5 @@
 package edu.ufl.cise.plpfa22;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -75,15 +73,51 @@ public class Token implements IToken {
         if (stringValue == null) {
             final StringBuilder joined = new StringBuilder();
             final int num = ESCAPED_SYMBOLS.length;
-            for (int i = 0; i < num - 1; i++) {
-                joined.append(ESCAPED_SYMBOLS[i]);
-                joined.append("|");
+            for (int i = 0; i < num; i++) {
+                if (ESCAPED_SYMBOLS[i] == '\\') joined.append("\\\\");
+                else joined.append(ESCAPED_SYMBOLS[i]);
             }
-            joined.append(ESCAPED_SYMBOLS[num - 1]);
+            String text = new String(getText());
+            final Pattern quotesPattern = Pattern.compile("(?<!\\\\)\\\"", Pattern.DOTALL);
+            final Matcher quotesMatcher = quotesPattern.matcher(text);
+            text = quotesMatcher.replaceAll("");
 
-            final Pattern pattern = Pattern.compile("\\(" + joined + ")");
-            final Matcher matcher = pattern.matcher(new String(getText()));
-            stringValue = matcher.replaceAll("");
+            final Pattern pattern = Pattern.compile("\\\\[" + joined + "]", Pattern.DOTALL);
+            final Matcher matcher = pattern.matcher(text);
+            final StringBuilder escapeReplacedString = new StringBuilder();
+            while (matcher.find()) {
+                final String escapeCharString = matcher.group();
+                switch (escapeCharString) {
+                    case "\\b":
+                        matcher.appendReplacement(escapeReplacedString, Character.toString('\b'));
+                        break;
+                    case "\\t":
+                        matcher.appendReplacement(escapeReplacedString, Character.toString('\t'));
+                        break;
+                    case "\\n":
+                        matcher.appendReplacement(escapeReplacedString, Character.toString('\n'));
+                        break;
+                    case "\\f":
+                        matcher.appendReplacement(escapeReplacedString, Character.toString('\f'));
+                        break;
+                    case "\\r":
+                        matcher.appendReplacement(escapeReplacedString, Character.toString('\r'));
+                        break;
+                    case "\\\"":
+                        matcher.appendReplacement(escapeReplacedString, Character.toString('"'));
+                        break;
+                    case "\\'":
+                        matcher.appendReplacement(escapeReplacedString, Character.toString('\''));
+                        break;
+                    case "\\\\":
+                        matcher.appendReplacement(escapeReplacedString, "\\\\");
+                        break;
+                    default:
+                        System.out.println(escapeCharString);
+                }
+            }
+            matcher.appendTail(escapeReplacedString);
+            stringValue = escapeReplacedString.toString();
         }
         return stringValue;
     }

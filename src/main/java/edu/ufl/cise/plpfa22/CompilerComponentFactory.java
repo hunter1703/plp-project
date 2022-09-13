@@ -7,9 +7,6 @@ package edu.ufl.cise.plpfa22;
 
 import edu.ufl.cise.plpfa22.IToken.Kind;
 
-import javax.print.DocFlavor;
-import javax.xml.stream.events.Characters;
-
 import static edu.ufl.cise.plpfa22.IToken.Kind.*;
 import static edu.ufl.cise.plpfa22.Token.ESCAPED_SYMBOLS;
 
@@ -27,7 +24,8 @@ public class CompilerComponentFactory {
         start.addTransition(null, getReservedCharFSA(DOT, '.'));
         start.addTransition(null, getReservedCharFSA(COMMA, ','));
         start.addTransition(null, getReservedCharFSA(SEMI, ';'));
-        start.addTransition(null, getReservedCharFSA(QUOTE, '"'));
+        // Not including the QUOTE token as it would result in identifying input "unterminated as a valid string with two tokens QUOTE and IDENT
+        // start.addTransition(null, getReservedCharFSA(QUOTE, '"'));
         start.addTransition(null, getReservedCharFSA(LPAREN, '('));
         start.addTransition(null, getReservedCharFSA(RPAREN, ')'));
         start.addTransition(null, getReservedCharFSA(TIMES, '*'));
@@ -98,7 +96,6 @@ public class CompilerComponentFactory {
     private static FSANode getIdentifierFSA() {
         final FSANode start = new FSANode(false, IDENT);
 
-        //TODO: see if somehow we can reuse getIntFSA method
         final FSANode intsStart = new FSANode(true, IDENT);
         for (int i = 0; i <= 9; i++) {
             final FSANode node = new FSANode(true, IDENT);
@@ -118,10 +115,12 @@ public class CompilerComponentFactory {
         final FSANode dollar = new FSANode(true, IDENT);
         dollar.addTransition(null, start);
         dollar.addTransition(null, intsStart);
+        start.addTransition('$', dollar);
 
         final FSANode underscore = new FSANode(true, IDENT);
         underscore.addTransition(null, start);
         underscore.addTransition(null, intsStart);
+        start.addTransition('_', underscore);
 
         return start;
     }
