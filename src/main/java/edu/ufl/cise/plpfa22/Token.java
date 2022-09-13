@@ -74,9 +74,9 @@ public class Token implements IToken {
                 else joined.append(ESCAPED_SYMBOLS[i]);
             }
             String text = new String(getText());
-            final Pattern quotesPattern = Pattern.compile("(?<!\\\\)\\\"", Pattern.DOTALL);
+            final Pattern quotesPattern = Pattern.compile("\"(.*)\"", Pattern.DOTALL);
             final Matcher quotesMatcher = quotesPattern.matcher(text);
-            text = quotesMatcher.replaceAll("");
+            text = quotesMatcher.replaceAll("$1");
 
             final Pattern pattern = Pattern.compile("\\\\[" + joined + "]", Pattern.DOTALL);
             final Matcher matcher = pattern.matcher(text);

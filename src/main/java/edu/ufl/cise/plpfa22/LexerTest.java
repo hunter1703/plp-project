@@ -553,4 +553,29 @@ class LexerTest {
 
         checkEOF(lexer.next());
     }
+
+    public void testSingleEscapeSequence() throws LexicalException {
+        String input ="""
+        "\\b"
+        "\\t"
+        "\\n"
+        "\\f"
+        "\\r"
+        "\\""
+        "\\'"
+        "\\\\"
+        ""
+        """;
+        show(input);
+        ILexer lexer = getLexer(input);
+        checkString(lexer.next(), "\b", 1, 1);
+        checkString(lexer.next(), "\t", 2, 1);
+        checkString(lexer.next(), "\n", 3, 1);
+        checkString(lexer.next(), "\f", 4, 1);
+        checkString(lexer.next(), "\r", 5, 1);
+        checkString(lexer.next(), "\"", 6, 1);
+        checkString(lexer.next(), "\'", 7, 1);
+        checkString(lexer.next(), "\\", 8, 1);
+        checkString(lexer.next(), "", 9, 1);
+    }
 }
