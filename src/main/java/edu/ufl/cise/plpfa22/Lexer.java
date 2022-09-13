@@ -43,6 +43,15 @@ public class Lexer implements ILexer {
         if (kind == NEW_LINE) {
             tokenLine++;
             tokenColumn = 1;
+        } else if (kind == STRING_LIT) {
+            //see testStringLineNum()
+            final StringToken stringToken = (StringToken) nextToken;
+            final int numNewLines = stringToken.getNumNewLines();
+            tokenLine += numNewLines;
+            if (numNewLines > 0) {
+                tokenColumn = 1;
+            }
+            tokenColumn += stringToken.getLastLineLen();
         } else {
             tokenColumn += len;
         }
@@ -58,7 +67,7 @@ public class Lexer implements ILexer {
         try {
             final int length = input.length;
             if (currIndex >= length) {
-                return Token.ofKind(EOF, "\0", null);
+                return TokenFactory.ofKind(EOF, "\0", null);
             }
             int index = currIndex;
             final StringBuilder sb = new StringBuilder();
@@ -83,7 +92,7 @@ public class Lexer implements ILexer {
                 } else if (!longerTokenKinds.isEmpty()) {
                     //longer tokens recognized; spit out tokens based on priority (e.g. keywords are higher priority than identifiers)
                     final Kind kind = getHighestPriority(longerTokenKinds);
-                    possibleToken = Token.ofKind(kind, sb.toString(), new SourceLocation(tokenLine, tokenColumn));
+                    possibleToken = TokenFactory.ofKind(kind, sb.toString(), new SourceLocation(tokenLine, tokenColumn));
                 }
             }
             if (possibleToken == null) {
@@ -91,7 +100,7 @@ public class Lexer implements ILexer {
             }
             return possibleToken;
         } catch (NumberFormatException ex) {
-          throw new LexicalException("Invalid integer");
+            throw new LexicalException("Invalid integer");
         } finally {
             fsa.reset();
         }

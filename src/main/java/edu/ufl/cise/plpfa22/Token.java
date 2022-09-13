@@ -30,10 +30,6 @@ public class Token implements IToken {
         this.boolValue = null;
     }
 
-    public static Token ofKind(final Kind kind, final String text, final SourceLocation location) {
-        return new Token(kind, text.toCharArray(), location, text.length());
-    }
-
     @Override
     public Kind getKind() {
         return kind;
