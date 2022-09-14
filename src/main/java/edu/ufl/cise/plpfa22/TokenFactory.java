@@ -10,6 +10,6 @@ public final class TokenFactory {
         if (kind == STRING_LIT) {
             return new StringToken(text, location);
         }
-        return new Token(kind, text.toCharArray(), location, text.length());
+        return new Token(kind, text.toCharArray(), location);
     }
 }

@@ -95,6 +95,4 @@ public interface IToken {
 	 * @return String value represented by the characters in this IToken.  The returned String does not include the delimiters, and escape sequences have been handled.
 	 */
 	public String getStringValue();
-
-	public int length();
 }

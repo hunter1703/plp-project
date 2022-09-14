@@ -425,8 +425,7 @@ class LexerTest {
     @Test
     public void testStringLineNum() throws LexicalException {
         String input = """
-                "He
-                llo Wo\\nr
+                "He\nllo Wo\\nr
                 ld" ident
                 "Hello\\tAgain"
                 """;
@@ -579,5 +578,19 @@ class LexerTest {
         checkString(lexer.next(), "\'", 7, 1);
         checkString(lexer.next(), "\\", 8, 1);
         checkString(lexer.next(), "", 9, 1);
+    }
+
+    @Test
+    public void testStringPeekAndNext() throws LexicalException {
+        String input = """
+				"This is a string"
+				123peek
+				""";
+        show(input);
+        ILexer lexer = getLexer(input);
+        checkString(lexer.peek(), "This is a string", 1, 1);
+        checkString(lexer.next(), "This is a string", 1, 1);
+        checkInt(lexer.next(), 123, 2, 1);
+        checkIdent(lexer.next(), "peek", 2, 4);
     }
 }

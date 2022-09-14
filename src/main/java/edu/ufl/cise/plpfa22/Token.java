@@ -11,20 +11,18 @@ public class Token implements IToken {
     private final Kind kind;
     private final char[] text;
     private final SourceLocation sourceLocation;
-    private final int length;
 
     private Integer intValue;
     private Boolean boolValue;
     private String stringValue;
 
-    public Token(Kind kind, char[] text, SourceLocation sourceLocation, int length) {
+    public Token(Kind kind, char[] text, SourceLocation sourceLocation) {
         if (kind == null) {
             throw new IllegalArgumentException("Kind cannot be null");
         }
         this.kind = kind;
         this.text = text;
         this.sourceLocation = sourceLocation;
-        this.length = length;
 
         this.intValue = null;
         this.boolValue = null;
@@ -116,11 +114,6 @@ public class Token implements IToken {
             stringValue = escapeReplacedString.toString();
         }
         return stringValue;
-    }
-
-    @Override
-    public int length() {
-        return length;
     }
 
     private static void throwIfInvalidKind(final Kind expected, final Kind is) {

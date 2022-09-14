@@ -12,7 +12,7 @@ public class StringToken extends Token {
     private final int lastLineLen;
 
     public StringToken(final String rawText, final SourceLocation location) {
-        super(STRING_LIT, rawText.toCharArray(), location, rawText.length());
+        super(STRING_LIT, rawText.toCharArray(), location);
 
         final Matcher matcher = NEW_LINE_PATTERN.matcher(getStringValue());
         int count = 0;

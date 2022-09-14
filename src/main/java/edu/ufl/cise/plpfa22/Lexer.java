@@ -36,7 +36,7 @@ public class Lexer implements ILexer {
     public IToken next() throws LexicalException {
         final IToken nextToken = peek();
         //advance
-        final int len = nextToken.length();
+        final int len = nextToken.getText().length;
         currIndex += len;
 
         final Kind kind = nextToken.getKind();
