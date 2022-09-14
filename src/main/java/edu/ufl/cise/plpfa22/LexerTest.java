@@ -86,6 +86,8 @@ class LexerTest {
 
         lexer = getLexer(" \n\t");
         checkEOF(lexer.next());
+        checkEOF(lexer.next());
+        checkEOF(lexer.next());
     }
 
     //A couple of single character tokens
