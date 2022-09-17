@@ -16,6 +16,10 @@ public class CompilerComponentFactory {
         return new Lexer(input + "\0", getLanguageFSA());
     }
 
+    public static IParser getParser(final ILexer lexer) {
+        return new Parser(lexer);
+    }
+
     private static FSA getLanguageFSA() {
         final FSANode start = new FSANode(false, null);
         start.addTransition(null, getReservedCharFSA(EOF, '\0'));
