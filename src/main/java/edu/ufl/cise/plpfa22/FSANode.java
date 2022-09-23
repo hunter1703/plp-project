@@ -7,9 +7,9 @@ import java.util.*;
 public class FSANode {
     private final Map<Character, List<FSANode>> next;
     private final boolean isAccepting;
-    private final Kind kind;
+    private final String kind;
 
-    public FSANode(boolean isAccepting, Kind kind) {
+    public FSANode(boolean isAccepting, String kind) {
         this.next = new HashMap<>();
         this.isAccepting = isAccepting;
         this.kind = kind;
@@ -30,7 +30,7 @@ public class FSANode {
         return isAccepting;
     }
 
-    public Kind getKind() {
+    public String getKind() {
         return kind;
     }
 }

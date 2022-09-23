@@ -9,7 +9,7 @@ public class Token implements IToken {
 
     public static final char[] ESCAPED_SYMBOLS = {'b', 't', 'n', 'f', 'r', '"', '\'', '\\'};
     private final Kind kind;
-    private final char[] text;
+    private char[] text;
     private final SourceLocation sourceLocation;
 
     private Integer intValue;
@@ -17,9 +17,6 @@ public class Token implements IToken {
     private String stringValue;
 
     public Token(Kind kind, char[] text, SourceLocation sourceLocation) {
-        if (kind == null) {
-            throw new IllegalArgumentException("Kind cannot be null");
-        }
         this.kind = kind;
         this.text = text;
         this.sourceLocation = sourceLocation;
@@ -36,6 +33,10 @@ public class Token implements IToken {
     @Override
     public char[] getText() {
         return text;
+    }
+
+    public void setText(char[] text) {
+        this.text = text;
     }
 
     @Override

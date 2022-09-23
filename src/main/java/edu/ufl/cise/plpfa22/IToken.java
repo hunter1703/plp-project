@@ -11,7 +11,7 @@ public interface IToken {
 	    /**
 	     * Represents the location in the source code.  Lines and columns begin counting at 1.  
 	     */
-	    public record SourceLocation(int line, int column) {}
+	    public record SourceLocation(int line, int column) {}  
 	    
 	    public static enum Kind {
 	    	IDENT,
@@ -38,8 +38,6 @@ public interface IToken {
 	    	LE,     // <=
 	    	GT,     // >
 	    	GE,     // >=
-			NEW_LINE,
-			WHITE_SPACE,
 	    	KW_CONST,
 	    	KW_VAR,
 	    	KW_PROCEDURE,
@@ -52,7 +50,6 @@ public interface IToken {
 	    	KW_DO,	    	
 	    	EOF,  // used as a sential, does not correspond to input	    	
 	        ERROR, // use to avoid exceptions if scanning all input at once
-			COMMENT
 	}
 
 	/**
@@ -95,4 +92,5 @@ public interface IToken {
 	 * @return String value represented by the characters in this IToken.  The returned String does not include the delimiters, and escape sequences have been handled.
 	 */
 	public String getStringValue();
+
 }

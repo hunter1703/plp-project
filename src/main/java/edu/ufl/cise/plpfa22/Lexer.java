@@ -8,10 +8,14 @@ import java.util.*;
 import static edu.ufl.cise.plpfa22.IToken.Kind.*;
 
 public class Lexer implements ILexer {
-    private static final Map<Kind, Integer> KIND_VS_PRIORITY = new HashMap<>();
+    private static final Map<String, Integer> KIND_VS_PRIORITY = new HashMap<>();
+    private static final Token NEW_LINE_TOKEN = TokenFactory.ofKind(null, "", null);
+    private static final Token EXT_NEW_LINE_TOKEN = TokenFactory.ofKind(null, "", null);
+    private static final Token WHITE_SPACE_TOKEN = TokenFactory.ofKind(null, "", null);
+    private static final Token COMMENT_TOKEN = TokenFactory.ofKind(null, "", null);
 
     static {
-        final Kind[] allKinds = new Kind[]{EOF, COMMENT, NEW_LINE, WHITE_SPACE, ERROR, DOT, COMMA, SEMI, LPAREN, RPAREN, PLUS, MINUS, TIMES, DIV, MOD, QUESTION, BANG, ASSIGN, EQ, NEQ, LT, LE, GT, GE, KW_CONST, KW_VAR, KW_PROCEDURE, KW_CALL, KW_BEGIN, KW_END, KW_IF, KW_THEN, KW_WHILE, KW_DO, BOOLEAN_LIT, NUM_LIT, IDENT, STRING_LIT};
+        final String[] allKinds = new String[]{EOF.name(), "COMMENT", "NEW_LINE", "WHITE_SPACE", ERROR.name(), DOT.name(), COMMA.name(), SEMI.name(), LPAREN.name(), RPAREN.name(), PLUS.name(), MINUS.name(), TIMES.name(), DIV.name(), MOD.name(), QUESTION.name(), BANG.name(), ASSIGN.name(), EQ.name(), NEQ.name(), LT.name(), LE.name(), GT.name(), GE.name(), KW_CONST.name(), KW_VAR.name(), KW_PROCEDURE.name(), KW_CALL.name(), KW_BEGIN.name(), KW_END.name(), KW_IF.name(), KW_THEN.name(), KW_WHILE.name(), KW_DO.name(), BOOLEAN_LIT.name(), NUM_LIT.name(), IDENT.name(), STRING_LIT.name()};
         final int num = allKinds.length;
         for (int i = 0; i < num; i++) {
             KIND_VS_PRIORITY.put(allKinds[i], i);
@@ -35,14 +39,19 @@ public class Lexer implements ILexer {
     @Override
     public IToken next() throws LexicalException {
         final IToken nextToken = peek();
-        //advance
-        final int len = nextToken.getText().length;
-        currIndex += len;
-
         final Kind kind = nextToken.getKind();
-        if (kind == NEW_LINE) {
+        int len = -1;
+        if (nextToken == NEW_LINE_TOKEN || nextToken == EXT_NEW_LINE_TOKEN) {
             tokenLine++;
             tokenColumn = 1;
+            len = nextToken == NEW_LINE_TOKEN ? 1 : 2;
+        } else if (nextToken == COMMENT_TOKEN) {
+            tokenLine++;
+            tokenColumn = 1;
+            len = nextToken.getText().length;
+        } else if (nextToken == WHITE_SPACE_TOKEN) {
+            tokenColumn++;
+            len = 1;
         } else if (kind == STRING_LIT) {
             //see testStringLineNum()
             final StringToken stringToken = (StringToken) nextToken;
@@ -52,11 +61,13 @@ public class Lexer implements ILexer {
                 tokenColumn = 1;
             }
             tokenColumn += stringToken.getLastLineLen();
+            len = nextToken.getText().length;
         } else {
+            len = nextToken.getText().length;
             tokenColumn += len;
         }
-
-        if (kind == NEW_LINE || kind == WHITE_SPACE || kind == COMMENT) {
+        currIndex += len;
+        if (nextToken == NEW_LINE_TOKEN || nextToken == EXT_NEW_LINE_TOKEN || nextToken == WHITE_SPACE_TOKEN || nextToken == COMMENT_TOKEN) {
             return next();
         }
         return nextToken;
@@ -78,7 +89,7 @@ public class Lexer implements ILexer {
             while (index < length) {
                 final char ch = input[index++];
                 sb.append(ch);
-                final List<Kind> longerTokenKinds = new ArrayList<>(fsa.advance(ch));
+                final List<String> longerTokenKinds = new ArrayList<>(fsa.advance(ch));
                 //FSA did not advance to new states
                 if (!fsa.advanced()) {
                     if (possibleToken == null) {
@@ -91,8 +102,17 @@ public class Lexer implements ILexer {
                     return possibleToken;
                 } else if (!longerTokenKinds.isEmpty()) {
                     //longer tokens recognized; spit out tokens based on priority (e.g. keywords are higher priority than identifiers)
-                    final Kind kind = getHighestPriority(longerTokenKinds);
-                    possibleToken = TokenFactory.ofKind(kind, sb.toString(), new SourceLocation(tokenLine, tokenColumn));
+                    final String kind = getHighestPriority(longerTokenKinds);
+                    if ("NEW_LINE".equals(kind)) {
+                        possibleToken = sb.length() == 1 ? NEW_LINE_TOKEN : EXT_NEW_LINE_TOKEN;
+                    } else if ("WHITE_SPACE".equals(kind)) {
+                        possibleToken = WHITE_SPACE_TOKEN;
+                    } else if ("COMMENT".equals(kind)) {
+                        possibleToken = COMMENT_TOKEN;
+                        possibleToken.setText(sb.toString().toCharArray());
+                    } else {
+                        possibleToken = TokenFactory.ofKind(Kind.valueOf(kind), sb.toString(), new SourceLocation(tokenLine, tokenColumn));
+                    }
                 }
             }
             if (possibleToken == null) {
@@ -106,7 +126,7 @@ public class Lexer implements ILexer {
         }
     }
 
-    private static Kind getHighestPriority(final List<Kind> allKinds) {
+    private static String getHighestPriority(final List<String> allKinds) {
         allKinds.sort(Comparator.comparingInt(KIND_VS_PRIORITY::get));
         return allKinds.get(0);
     }

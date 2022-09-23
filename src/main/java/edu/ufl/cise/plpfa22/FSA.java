@@ -17,7 +17,7 @@ public class FSA {
     }
 
     //returns list of types of token recognized
-    public Set<Kind> advance(final char test) {
+    public Set<String> advance(final char test) {
         advanced = false;
         currNodes = currNodes.stream().flatMap(curr -> curr.getNextNodes(test).stream()).collect(Collectors.toSet());
         advanced = !currNodes.isEmpty();

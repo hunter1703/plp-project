@@ -56,7 +56,7 @@ public class CompilerComponentFactory {
         start.addTransition(null, getReservedMultiCharFSA(KW_DO, "DO"));
         start.addTransition(null, getBooleanFSA());
         start.addTransition(null, getWhiteSpaceFSA());
-        start.addTransition(null, getNewLineFSA());
+        start.addTransition(null, getNewLineFSA("NEW_LINE"));
         start.addTransition(null, getIntFSA());
         start.addTransition(null, getIdentifierFSA());
         start.addTransition(null, getStringLiteralFSA());
@@ -65,18 +65,24 @@ public class CompilerComponentFactory {
         return new FSA(start);
     }
 
-    private static FSANode getReservedCharFSA(final Kind kind, final char ch) {
+    private static FSANode getReservedCharFSA(final String kind, final char ch) {
         final FSANode start = new FSANode(false, kind);
         start.addTransition(ch, new FSANode(true, kind));
         return start;
     }
 
+    private static FSANode getReservedCharFSA(final Kind kind, final char ch) {
+        final FSANode start = new FSANode(false, kind.name());
+        start.addTransition(ch, new FSANode(true, kind.name()));
+        return start;
+    }
+
     private static FSANode getReservedMultiCharFSA(final Kind kind, final String str) {
-        final FSANode start = new FSANode(false, kind);
+        final FSANode start = new FSANode(false, kind.name());
         final char[] input = str.toCharArray();
         FSANode prevNode = start;
         for (char c : input) {
-            final FSANode newNode = new FSANode(true, kind);
+            final FSANode newNode = new FSANode(true, kind.name());
             prevNode.addTransition(c, newNode);
             prevNode = newNode;
         }
@@ -84,12 +90,12 @@ public class CompilerComponentFactory {
     }
 
     private static FSANode getBooleanFSA() {
-        final FSANode start = new FSANode(false, BOOLEAN_LIT);
+        final FSANode start = new FSANode(false, BOOLEAN_LIT.name());
         String[] booleans = {"TRUE", "FALSE"};
         for (String bool : booleans) {
             FSANode currNode = start;
             for (char c : bool.toCharArray()) {
-                final FSANode newNode = new FSANode(true, BOOLEAN_LIT);
+                final FSANode newNode = new FSANode(true, BOOLEAN_LIT.name());
                 currNode.addTransition(c, newNode);
                 currNode = newNode;
             }
@@ -98,11 +104,11 @@ public class CompilerComponentFactory {
     }
 
     private static FSANode getIdentifierFSA() {
-        final FSANode start = new FSANode(false, IDENT);
+        final FSANode start = new FSANode(false, IDENT.name());
 
-        final FSANode intsStart = new FSANode(true, IDENT);
+        final FSANode intsStart = new FSANode(true, IDENT.name());
         for (int i = 0; i <= 9; i++) {
-            final FSANode node = new FSANode(true, IDENT);
+            final FSANode node = new FSANode(true, IDENT.name());
             intsStart.addTransition(Character.forDigit(i, 10), node);
             node.addTransition(null, intsStart);
             node.addTransition(null, start);
@@ -110,18 +116,18 @@ public class CompilerComponentFactory {
 
         for (char c = 'A'; c <= 'z'; c++) {
             if (c > 'Z' && c < 'a') continue;
-            final FSANode newNode = new FSANode(true, IDENT);
+            final FSANode newNode = new FSANode(true, IDENT.name());
             start.addTransition(c, newNode);
             newNode.addTransition(null, start);
             newNode.addTransition(null, intsStart);
         }
 
-        final FSANode dollar = new FSANode(true, IDENT);
+        final FSANode dollar = new FSANode(true, IDENT.name());
         dollar.addTransition(null, start);
         dollar.addTransition(null, intsStart);
         start.addTransition('$', dollar);
 
-        final FSANode underscore = new FSANode(true, IDENT);
+        final FSANode underscore = new FSANode(true, IDENT.name());
         underscore.addTransition(null, start);
         underscore.addTransition(null, intsStart);
         start.addTransition('_', underscore);
@@ -130,18 +136,18 @@ public class CompilerComponentFactory {
     }
 
     private static FSANode getStringLiteralFSA() {
-        final FSANode start = new FSANode(false, STRING_LIT);
-        final FSANode openingQuotes = new FSANode(false, STRING_LIT);
+        final FSANode start = new FSANode(false, STRING_LIT.name());
+        final FSANode openingQuotes = new FSANode(false, STRING_LIT.name());
         start.addTransition('"', openingQuotes);
 
-        final FSANode closingQuotes = new FSANode(true, STRING_LIT);
+        final FSANode closingQuotes = new FSANode(true, STRING_LIT.name());
         openingQuotes.addTransition('"', closingQuotes);
 
         //escape branch
-        final FSANode escape = new FSANode(false, STRING_LIT);
+        final FSANode escape = new FSANode(false, STRING_LIT.name());
         openingQuotes.addTransition(null, escape);
 
-        final FSANode escapeSlash = new FSANode(false, STRING_LIT);
+        final FSANode escapeSlash = new FSANode(false, STRING_LIT.name());
         escape.addTransition('\\', escapeSlash);
 
         for (char c : ESCAPED_SYMBOLS) {
@@ -149,7 +155,7 @@ public class CompilerComponentFactory {
         }
 
         //other chars branch
-        final FSANode otherNode = new FSANode(false, STRING_LIT);
+        final FSANode otherNode = new FSANode(false, STRING_LIT.name());
         openingQuotes.addTransition(null, otherNode);
 
         for (int i = Character.MIN_VALUE; i <= Character.MAX_VALUE; i++) {
@@ -163,11 +169,11 @@ public class CompilerComponentFactory {
     }
 
     private static FSANode getCommentFSA() {
-        final FSANode start = new FSANode(false, COMMENT);
-        final FSANode commentStart = new FSANode(false, COMMENT);
+        final FSANode start = new FSANode(false, "COMMENT");
+        final FSANode commentStart = new FSANode(false, "COMMENT");
         start.addTransition('/', commentStart);
 
-        final FSANode first = new FSANode(false, COMMENT);
+        final FSANode first = new FSANode(false, "COMMENT");
         commentStart.addTransition('/', first);
         for (int i = Character.MIN_VALUE; i <= Character.MAX_VALUE; i++) {
             final char ch = (char) i;
@@ -176,15 +182,14 @@ public class CompilerComponentFactory {
             }
             first.addTransition(ch, first);
         }
-        first.addTransition(null, getNewLineFSA());
-        first.addTransition(null, getReservedCharFSA(EOF, '\0'));
+        first.addTransition(null, getNewLineFSA("COMMENT"));
+        first.addTransition(null, getReservedCharFSA("COMMENT", '\0'));
         return start;
     }
 
     private static FSANode getWhiteSpaceFSA() {
-        final FSANode start = new FSANode(false, WHITE_SPACE);
-        final FSANode nextNode = new FSANode(true, WHITE_SPACE);
-        nextNode.addTransition(null, start);
+        final FSANode start = new FSANode(false, "WHITE_SPACE");
+        final FSANode nextNode = new FSANode(true, "WHITE_SPACE");
 
         start.addTransition(' ', nextNode);
         start.addTransition('\r', nextNode);
@@ -192,12 +197,12 @@ public class CompilerComponentFactory {
         return start;
     }
 
-    private static FSANode getNewLineFSA() {
-        final FSANode start = new FSANode(false, NEW_LINE);
+    private static FSANode getNewLineFSA(String ofKind) {
+        final FSANode start = new FSANode(false, ofKind);
 
-        final FSANode one = new FSANode(true, NEW_LINE);
-        final FSANode two = new FSANode(false, NEW_LINE);
-        final FSANode three = new FSANode(true, NEW_LINE);
+        final FSANode one = new FSANode(true, ofKind);
+        final FSANode two = new FSANode(false, ofKind);
+        final FSANode three = new FSANode(true, ofKind);
 
         start.addTransition('\n', one);
 
@@ -208,17 +213,17 @@ public class CompilerComponentFactory {
     }
 
     private static FSANode getIntFSA() {
-        final FSANode start = new FSANode(false, NUM_LIT);
-        final FSANode zero = new FSANode(true, NUM_LIT);
+        final FSANode start = new FSANode(false, NUM_LIT.name());
+        final FSANode zero = new FSANode(true, NUM_LIT.name());
         start.addTransition('0', zero);
 
-        final FSANode first = new FSANode(false, NUM_LIT);
+        final FSANode first = new FSANode(false, NUM_LIT.name());
 
         for (int i = 1; i <= 9; i++) {
             start.addTransition(Character.forDigit(i, 10), first);
         }
 
-        final FSANode second = new FSANode(true, NUM_LIT);
+        final FSANode second = new FSANode(true, NUM_LIT.name());
         first.addTransition(null, second);
 
         for (int i = 0; i <= 9; i++) {
