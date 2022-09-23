@@ -595,4 +595,18 @@ class LexerTest {
         checkInt(lexer.next(), 123, 2, 1);
         checkIdent(lexer.next(), "peek", 2, 4);
     }
+
+    @Test
+    public void testStringPeekAndNext2() throws LexicalException {
+        String input = """
+                BEGIN
+                CALL
+                """;
+        show(input);
+        ILexer lexer = getLexer(input);
+        checkToken(lexer.peek(), KW_BEGIN, 1, 1);
+        checkToken(lexer.next(), KW_BEGIN, 1, 1);
+        checkToken(lexer.peek(), KW_CALL, 2, 1);
+        checkToken(lexer.next(), KW_CALL, 2, 1);
+    }
 }
