@@ -60,7 +60,7 @@ class ParserTest {
     @Test
     void test1() throws PLPException {
         String input = """
-                ! 0 .""";
+                !0.""";
         ASTNode ast = getAST(input);
         assertThat("", ast, instanceOf(Program.class));
         Block v0 = ((Program) ast).block;
@@ -82,7 +82,7 @@ class ParserTest {
     @Test
     void test2() throws PLPException {
         String input = """
-                ! "hello" .""";
+                !"hello".""";
         ASTNode ast = getAST(input);
         assertThat("", ast, instanceOf(Program.class));
         Block v0 = ((Program) ast).block;
@@ -104,7 +104,7 @@ class ParserTest {
     @Test
     void test3() throws PLPException {
         String input = """
-                ! TRUE .""";
+                !TRUE.""";
         ASTNode ast = getAST(input);
         assertThat("", ast, instanceOf(Program.class));
         Block v0 = ((Program) ast).block;
@@ -126,8 +126,7 @@ class ParserTest {
     @Test
     void test4() throws PLPException {
         String input = """
-                ! abc
-                .
+                !abc.
                 """;
         ASTNode ast = getAST(input);
         assertThat("", ast, instanceOf(Program.class));
@@ -150,8 +149,7 @@ class ParserTest {
     @Test
     void test5() throws PLPException {
         String input = """
-                VAR abc;
-                .
+                VAR abc;.
                 """;
         ASTNode ast = getAST(input);
         assertThat("", ast, instanceOf(Program.class));
@@ -173,13 +171,7 @@ class ParserTest {
     @Test
     void test6() throws PLPException {
         String input = """
-                BEGIN
-                ! "hello";
-                ! TRUE;
-                !  33 ;
-                ! variable
-                END
-                .
+                BEGIN!"hello";!TRUE;!33;!variable END.
                 """;
         ASTNode ast = getAST(input);
         assertThat("", ast, instanceOf(Program.class));
@@ -219,11 +211,7 @@ class ParserTest {
     @Test
     void test7() throws PLPException {
         String input = """
-                BEGIN
-                ? abc;
-                ! variable
-                END
-                .
+                BEGIN?abc;!variable END.
                 """;
         ASTNode ast = getAST(input);
         assertThat("", ast, instanceOf(Program.class));
@@ -251,8 +239,7 @@ class ParserTest {
     @Test
     void test8() throws PLPException {
         String input = """
-                CONST a = 3, b = TRUE, c = "hello";
-                .
+                CONST a = 3, b = TRUE, c = "hello";.
                 """;
         ASTNode ast = getAST(input);
         assertThat("", ast, instanceOf(Program.class));
@@ -286,12 +273,8 @@ class ParserTest {
     @Test
     void test9() throws PLPException {
         String input = """
-                BEGIN
-                x := 3;
-                y := "hello";
-                b := FALSE
-                END
-                .
+                BEGIN 
+                x := 3;y := "hello";b := FALSE END.
                 """;
         ASTNode ast = getAST(input);
         assertThat("", ast, instanceOf(Program.class));
@@ -624,8 +607,7 @@ class ParserTest {
     @Test
     void test14() throws PLPException {
         String input = """
-                PROCEDURE 42
-                .
+                PROCEDURE 42.
                 """;
         assertThrows(SyntaxException.class, () -> {
             @SuppressWarnings("unused")
