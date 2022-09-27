@@ -591,6 +591,8 @@ class LexerTest {
         show(input);
         ILexer lexer = getLexer(input);
         checkString(lexer.peek(), "This is a string", 1, 1);
+        checkString(lexer.peek(), "This is a string", 1, 1);
+        checkString(lexer.peek(), "This is a string", 1, 1);
         checkString(lexer.next(), "This is a string", 1, 1);
         checkInt(lexer.next(), 123, 2, 1);
         checkIdent(lexer.next(), "peek", 2, 4);

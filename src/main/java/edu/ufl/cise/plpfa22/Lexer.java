@@ -28,59 +28,74 @@ public class Lexer implements ILexer {
     private int tokenLine;
     private int tokenColumn;
 
+    private int peekIndex;
+    private int peekLine;
+    private int peekColumn;
+
     public Lexer(String input, FSA fsa) {
         this.input = input == null ? new char[0] : input.toCharArray();
         this.fsa = fsa;
-        this.currIndex = 0;
-        this.tokenLine = 1;
-        this.tokenColumn = 1;
+        this.currIndex = this.peekIndex = 0;
+        this.tokenLine = this.peekLine = 1;
+        this.tokenColumn = this.peekColumn = 1;
     }
 
     @Override
     public IToken next() throws LexicalException {
         final IToken nextToken = peek();
-        final Kind kind = nextToken.getKind();
-        int len = -1;
-        if (nextToken == NEW_LINE_TOKEN || nextToken == EXT_NEW_LINE_TOKEN) {
-            tokenLine++;
-            tokenColumn = 1;
-            len = nextToken == NEW_LINE_TOKEN ? 1 : 2;
-        } else if (nextToken == COMMENT_TOKEN) {
-            tokenLine++;
-            tokenColumn = 1;
-            len = nextToken.getText().length;
-        } else if (nextToken == WHITE_SPACE_TOKEN) {
-            tokenColumn++;
-            len = 1;
-        } else if (kind == STRING_LIT) {
-            //see testStringLineNum()
-            final StringToken stringToken = (StringToken) nextToken;
-            final int numNewLines = stringToken.getNumNewLines();
-            tokenLine += numNewLines;
-            if (numNewLines > 0) {
-                tokenColumn = 1;
-            }
-            tokenColumn += stringToken.getLastLineLen();
-            len = nextToken.getText().length;
-        } else {
-            len = nextToken.getText().length;
-            tokenColumn += len;
-        }
-        currIndex += len;
-        if (nextToken == NEW_LINE_TOKEN || nextToken == EXT_NEW_LINE_TOKEN || nextToken == WHITE_SPACE_TOKEN || nextToken == COMMENT_TOKEN) {
-            return next();
-        }
+        currIndex = peekIndex;
+        tokenLine = peekLine;
+        tokenColumn = peekColumn;
         return nextToken;
     }
 
     @Override
     public IToken peek() throws LexicalException {
+        IToken nextToken = null;
+        peekIndex = currIndex;
+        peekLine = tokenLine;
+        peekColumn = tokenColumn;
+
+        while (nextToken == null || nextToken == NEW_LINE_TOKEN || nextToken == EXT_NEW_LINE_TOKEN || nextToken == WHITE_SPACE_TOKEN || nextToken == COMMENT_TOKEN) {
+            nextToken = peek(peekIndex, peekLine, peekColumn);
+            final Kind kind = nextToken.getKind();
+            int len = -1;
+            if (nextToken == NEW_LINE_TOKEN || nextToken == EXT_NEW_LINE_TOKEN) {
+                peekLine++;
+                peekColumn = 1;
+                len = nextToken == NEW_LINE_TOKEN ? 1 : 2;
+            } else if (nextToken == COMMENT_TOKEN) {
+                peekLine++;
+                peekColumn = 1;
+                len = nextToken.getText().length;
+            } else if (nextToken == WHITE_SPACE_TOKEN) {
+                peekColumn++;
+                len = 1;
+            } else if (kind == STRING_LIT) {
+                //see testStringLineNum()
+                final StringToken stringToken = (StringToken) nextToken;
+                final int numNewLines = stringToken.getNumNewLines();
+                peekLine += numNewLines;
+                if (numNewLines > 0) {
+                    peekColumn = 1;
+                }
+                peekColumn += stringToken.getLastLineLen();
+                len = nextToken.getText().length;
+            } else {
+                len = nextToken.getText().length;
+                peekColumn += len;
+            }
+            peekIndex += len;
+        }
+        return nextToken;
+    }
+
+    public IToken peek(int index, final int line, final int column) throws LexicalException {
         try {
             final int length = input.length;
-            if (currIndex >= length) {
+            if (index >= length) {
                 return TokenFactory.ofKind(EOF, "\0", null);
             }
-            int index = currIndex;
             final StringBuilder sb = new StringBuilder();
 
             Token possibleToken = null;
@@ -96,6 +111,7 @@ public class Lexer implements ILexer {
                         throw new LexicalException();
                     }
                     //return longest token recognized yet
+                    int len = -1;
                     if (possibleToken.getKind() == NUM_LIT) {
                         possibleToken.getIntValue();
                     }
@@ -111,7 +127,7 @@ public class Lexer implements ILexer {
                         possibleToken = COMMENT_TOKEN;
                         possibleToken.setText(sb.toString().toCharArray());
                     } else {
-                        possibleToken = TokenFactory.ofKind(Kind.valueOf(kind), sb.toString(), new SourceLocation(tokenLine, tokenColumn));
+                        possibleToken = TokenFactory.ofKind(Kind.valueOf(kind), sb.toString(), new SourceLocation(line, column));
                     }
                 }
             }
