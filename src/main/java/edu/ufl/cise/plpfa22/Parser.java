@@ -47,6 +47,7 @@ public class Parser implements IParser {
         Block b = getBlockAST();
         t = lexer.next();
         isKind(t, DOT);
+        isKind(lexer.next(), EOF);
         return new Program(b.firstToken, b);
     }
 
