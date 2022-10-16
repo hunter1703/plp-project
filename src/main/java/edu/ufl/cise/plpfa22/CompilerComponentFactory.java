@@ -6,6 +6,7 @@
 package edu.ufl.cise.plpfa22;
 
 import edu.ufl.cise.plpfa22.IToken.Kind;
+import edu.ufl.cise.plpfa22.ast.ASTVisitor;
 
 import static edu.ufl.cise.plpfa22.IToken.Kind.*;
 import static edu.ufl.cise.plpfa22.Token.ESCAPED_SYMBOLS;
@@ -18,6 +19,10 @@ public class CompilerComponentFactory {
 
     public static IParser getParser(final ILexer lexer) {
         return new Parser(lexer);
+    }
+
+    public static ASTVisitor getScopeVisitor() {
+        return new ScopeVisitor();
     }
 
     private static FSA getLanguageFSA() {
