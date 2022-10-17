@@ -10,15 +10,18 @@ public class SymbolTable {
     private final Map<String, List<SymbolTableEntry>> table;
     private final LinkedList<String> scopeStack;
     private int currentNestLevel;
+    private int id;
 
     public SymbolTable() {
         table = new HashMap<>();
         scopeStack = new LinkedList<>();
         currentNestLevel = -1;
+        id = 0;
     }
 
     public void enterScope() {
-        final String id = Integer.toString(++currentNestLevel);
+        final String id = Integer.toString(this.id++);
+        ++currentNestLevel;
         scopeStack.push(id);
     }
 
@@ -34,7 +37,7 @@ public class SymbolTable {
         if (entries.stream().anyMatch(e -> e.scopeId.equals(scopeId))) {
             return -1;
         }
-        entries.add(new SymbolTableEntry(currentNestLevel, declaration, scopeId));
+        entries.add(new SymbolTableEntry(declaration, scopeId));
         return currentNestLevel;
     }
 
@@ -52,12 +55,10 @@ public class SymbolTable {
     }
 
     private static class SymbolTableEntry {
-        private final int nestingLevel;
         private final Declaration declaration;
         private final String scopeId;
 
-        private SymbolTableEntry(int nestingLevel, Declaration declaration, String scopeId) {
-            this.nestingLevel = nestingLevel;
+        private SymbolTableEntry(Declaration declaration, String scopeId) {
             this.declaration = declaration;
             this.scopeId = scopeId;
         }
