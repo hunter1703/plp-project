@@ -35,10 +35,11 @@ public class ScopeVisitor implements ASTVisitor {
         }
         for (final ProcDec dec : nullSafeList(procedureDecs)) {
             final String name = dec.ident.getStringValue();
-            if (!symbolTable.insert(name, dec)) {
+            final int insertNestLevel = symbolTable.insert(name, dec);
+            if (insertNestLevel == -1) {
                 throw new ScopeException();
             }
-            dec.setNest(symbolTable.findNestLevel(name));
+            dec.setNest(insertNestLevel);
         }
         for (final ProcDec dec : nullSafeList(procedureDecs)) {
             visitProcedure(dec, arg);
@@ -169,20 +170,22 @@ public class ScopeVisitor implements ASTVisitor {
     @Override
     public Object visitConstDec(ConstDec constDec, Object arg) throws PLPException {
         final String name = constDec.ident.getStringValue();
-        if (!symbolTable.insert(name, constDec)) {
+        final int insertNestLevel = symbolTable.insert(name, constDec);
+        if (insertNestLevel == -1) {
             throw new ScopeException();
         }
-        constDec.setNest(symbolTable.findNestLevel(name));
+        constDec.setNest(insertNestLevel);
         return null;
     }
 
     @Override
     public Object visitVarDec(VarDec varDec, Object arg) throws PLPException {
         final String name = varDec.ident.getStringValue();
-        if (!symbolTable.insert(name, varDec)) {
+        final int insertNestLevel = symbolTable.insert(name, varDec);
+        if (insertNestLevel == -1) {
             throw new ScopeException();
         }
-        varDec.setNest(symbolTable.findNestLevel(name));
+        varDec.setNest(insertNestLevel);
         return null;
     }
 

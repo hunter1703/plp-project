@@ -27,21 +27,19 @@ public class SymbolTable {
         currentNestLevel--;
     }
 
-    public boolean insert(final String name, final Declaration declaration) {
+    public int insert(final String name, final Declaration declaration) {
         table.putIfAbsent(name, new ArrayList<>());
         final List<SymbolTableEntry> entries = table.get(name);
         final String scopeId = scopeStack.peek();
         if (entries.stream().anyMatch(e -> e.scopeId.equals(scopeId))) {
-            return false;
+            return -1;
         }
         entries.add(new SymbolTableEntry(currentNestLevel, declaration, scopeId));
-        return true;
+        return currentNestLevel;
     }
 
     public Declaration find(final String name) {
-        final Iterator<String> iter = scopeStack.descendingIterator();
-        while (iter.hasNext()) {
-            final String scopeId = iter.next();
+        for (String scopeId : scopeStack) {
             if (table.containsKey(name)) {
                 final SymbolTableEntry found = table.get(name).stream().filter(e -> scopeId.equals(e.scopeId)).findFirst().orElse(null);
                 if (found != null) {
@@ -51,21 +49,6 @@ public class SymbolTable {
 
         }
         return null;
-    }
-
-    public int findNestLevel(final String name) {
-        final Iterator<String> iter = scopeStack.descendingIterator();
-        while (iter.hasNext()) {
-            final String scopeId = iter.next();
-            if (table.containsKey(name)) {
-                final SymbolTableEntry found = table.get(name).stream().filter(e -> scopeId.equals(e.scopeId)).findFirst().orElse(null);
-                if (found != null) {
-                    return found.nestingLevel;
-                }
-            }
-
-        }
-        return -1;
     }
 
     private static class SymbolTableEntry {
