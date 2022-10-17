@@ -1,5 +1,7 @@
 package edu.ufl.cise.plpfa22;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -46,7 +48,7 @@ public class Token implements IToken {
 
     @Override
     public int getIntValue() {
-        throwIfInvalidKind(NUM_LIT, getKind());
+        throwIfInvalidKind(getKind(), NUM_LIT);
         if (intValue == null) {
             intValue = Integer.parseInt(new String(getText()));
         }
@@ -55,7 +57,7 @@ public class Token implements IToken {
 
     @Override
     public boolean getBooleanValue() {
-        throwIfInvalidKind(BOOLEAN_LIT, getKind());
+        throwIfInvalidKind(getKind(), BOOLEAN_LIT);
         if (boolValue == null) {
             boolValue = Boolean.parseBoolean(new String(getText()));
         }
@@ -64,7 +66,7 @@ public class Token implements IToken {
 
     @Override
     public String getStringValue() {
-        throwIfInvalidKind(STRING_LIT, getKind());
+        throwIfInvalidKind(getKind(), STRING_LIT, IDENT);
         if (stringValue == null) {
             final StringBuilder joined = new StringBuilder();
             final int num = ESCAPED_SYMBOLS.length;
@@ -117,9 +119,10 @@ public class Token implements IToken {
         return stringValue;
     }
 
-    private static void throwIfInvalidKind(final Kind expected, final Kind is) {
-        if (is != expected) {
-            throw new RuntimeException("Token is not of type : " + expected);
+    private static void throwIfInvalidKind(final Kind is, final Kind... expected) {
+        final List<Kind> expectedKinds = Arrays.asList(expected);
+        if (!expectedKinds.contains(is)) {
+            throw new RuntimeException("Token is not of type : " + expectedKinds);
         }
     }
 }
