@@ -4,12 +4,23 @@ import edu.ufl.cise.plpfa22.ast.Declaration;
 
 import java.util.*;
 
-import static java.util.Collections.emptyList;
-
 public class SymbolTable {
     private final Map<String, List<SymbolTableEntry>> table;
     private final LinkedList<String> scopeStack;
     private int currentNestLevel;
+    //id needs to be different from currentNestLevel
+    /**
+     * e.g.
+     * f() {
+     *     CONST a = 5
+     * }
+     * g() {
+     *     return a + 1
+     * }
+     *
+     * variable "a" is not within the scope of g(), but nesting level of both f() and g() are same.
+     * So if nesting level is used as scope id, then symbol table will wrongly be able to find "a" within the scope of g()
+     */
     private int id;
 
     public SymbolTable() {
