@@ -25,6 +25,10 @@ public class CompilerComponentFactory {
         return new ScopeVisitor();
     }
 
+    public static ASTVisitor getTypeInferenceVisitor() {
+        return new TypeInferenceVisitor();
+    }
+
     private static FSA getLanguageFSA() {
         final FSANode start = new FSANode(false, null);
         start.addTransition(null, getReservedCharFSA(EOF, '\0'));
