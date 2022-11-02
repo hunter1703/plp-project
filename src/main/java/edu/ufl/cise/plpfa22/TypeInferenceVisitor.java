@@ -68,7 +68,7 @@ public class TypeInferenceVisitor implements ASTVisitor {
         } else if (expressionType == null && identType != null) {
             setType(statementAssign.expression, identType);
         }
-        if (expressionType != null && identType != null && expressionType != identType) throw new TypeCheckException();
+        if (expressionType != null && identType != null && (expressionType != identType || (expressionType == PROCEDURE))) throw new TypeCheckException();
         return statementAssign.expression.getType() != null & expressionTypeChecked;
     }
 
@@ -82,6 +82,7 @@ public class TypeInferenceVisitor implements ASTVisitor {
     @Override
     public Object visitStatementInput(StatementInput statementInput, Object arg) throws PLPException {
         Type type = statementInput.ident.getDec().getType();
+        if (statementInput.ident.getDec() instanceof ConstDec) throw new TypeCheckException();
         if (type != null && type != STRING && type != NUMBER && type != BOOLEAN) throw new TypeCheckException();
         return type != null;
     }
@@ -121,10 +122,15 @@ public class TypeInferenceVisitor implements ASTVisitor {
 
     @Override
     public Object visitExpressionBinary(ExpressionBinary expressionBinary, Object arg) throws PLPException {
+        Kind opKind = expressionBinary.op.getKind();
+        Type expressionType = expressionBinary.getType();
+        if (expressionType != null && (opKind != Kind.EQ && opKind != Kind.NEQ && opKind != Kind.LT && opKind != Kind.LE && opKind != Kind.GT && opKind != Kind.GE)) {
+            setType(expressionBinary.e0, expressionType);
+            setType(expressionBinary.e1, expressionType);
+        }
         boolean childrenTyped = (boolean) visitExpression(expressionBinary.e0, arg) & (boolean) visitExpression(expressionBinary.e1, arg);
         Type leftType = expressionBinary.e0.getType();
         Type rightType = expressionBinary.e1.getType();
-        Kind opKind = expressionBinary.op.getKind();
         if (leftType == null && rightType != null) {
             setType(expressionBinary.e0, rightType);
             leftType = rightType;
@@ -168,25 +174,36 @@ public class TypeInferenceVisitor implements ASTVisitor {
 
     @Override
     public Object visitExpressionIdent(ExpressionIdent expressionIdent, Object arg) throws PLPException {
-        setType(expressionIdent, expressionIdent.getDec().getType());
+        Type expressionIdentType = expressionIdent.getType();
+        if (expressionIdentType != null) {
+            setType(expressionIdent.getDec(), expressionIdentType);
+        } else {
+            setType(expressionIdent, expressionIdent.getDec().getType());
+        }
         Type type = expressionIdent.getType();
         return type != null;
     }
 
     @Override
     public Object visitExpressionNumLit(ExpressionNumLit expressionNumLit, Object arg) throws PLPException {
+        Type expressionNumLitType = expressionNumLit.getType();
+        if (expressionNumLitType != null && expressionNumLitType != NUMBER) throw new TypeCheckException();
         setType(expressionNumLit, NUMBER);
         return true;
     }
 
     @Override
     public Object visitExpressionStringLit(ExpressionStringLit expressionStringLit, Object arg) throws PLPException {
+        Type expressionStringLitType = expressionStringLit.getType();
+        if (expressionStringLitType != null && expressionStringLitType != STRING) throw new TypeCheckException();
         setType(expressionStringLit, STRING);
         return true;
     }
 
     @Override
     public Object visitExpressionBooleanLit(ExpressionBooleanLit expressionBooleanLit, Object arg) throws PLPException {
+        Type expressionBooleanLitType = expressionBooleanLit.getType();
+        if (expressionBooleanLitType != null && expressionBooleanLitType != BOOLEAN) throw new TypeCheckException();
         setType(expressionBooleanLit, BOOLEAN);
         return true;
     }
