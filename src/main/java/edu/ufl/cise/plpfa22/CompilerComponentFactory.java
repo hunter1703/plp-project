@@ -29,6 +29,10 @@ public class CompilerComponentFactory {
         return new TypeInferenceVisitor();
     }
 
+    public static ASTVisitor getCodeGenVisitor(String packageName, String className, String sourceFileName) {
+        return new CodeGenVisitor(className, packageName, sourceFileName);
+    }
+
     private static FSA getLanguageFSA() {
         final FSANode start = new FSANode(false, null);
         start.addTransition(null, getReservedCharFSA(EOF, '\0'));
