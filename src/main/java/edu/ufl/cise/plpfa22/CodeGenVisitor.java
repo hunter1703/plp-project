@@ -1,31 +1,12 @@
 package edu.ufl.cise.plpfa22;
 
+import edu.ufl.cise.plpfa22.ast.*;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
-import edu.ufl.cise.plpfa22.ast.ASTVisitor;
 import edu.ufl.cise.plpfa22.IToken.Kind;
-import edu.ufl.cise.plpfa22.ast.Block;
-import edu.ufl.cise.plpfa22.ast.ConstDec;
-import edu.ufl.cise.plpfa22.ast.ExpressionBinary;
-import edu.ufl.cise.plpfa22.ast.ExpressionBooleanLit;
-import edu.ufl.cise.plpfa22.ast.ExpressionIdent;
-import edu.ufl.cise.plpfa22.ast.ExpressionNumLit;
-import edu.ufl.cise.plpfa22.ast.ExpressionStringLit;
-import edu.ufl.cise.plpfa22.ast.Ident;
-import edu.ufl.cise.plpfa22.ast.ProcDec;
-import edu.ufl.cise.plpfa22.ast.Program;
-import edu.ufl.cise.plpfa22.ast.StatementAssign;
-import edu.ufl.cise.plpfa22.ast.StatementBlock;
-import edu.ufl.cise.plpfa22.ast.StatementCall;
-import edu.ufl.cise.plpfa22.ast.StatementEmpty;
-import edu.ufl.cise.plpfa22.ast.StatementIf;
-import edu.ufl.cise.plpfa22.ast.StatementInput;
-import edu.ufl.cise.plpfa22.ast.StatementOutput;
-import edu.ufl.cise.plpfa22.ast.StatementWhile;
 import edu.ufl.cise.plpfa22.ast.Types.Type;
-import edu.ufl.cise.plpfa22.ast.VarDec;
 
 public class CodeGenVisitor implements ASTVisitor, Opcodes {
 
@@ -51,15 +32,6 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
 	public Object visitBlock(Block block, Object arg) throws PLPException {
 		MethodVisitor methodVisitor = (MethodVisitor)arg;
 		methodVisitor.visitCode();
-		for (ConstDec constDec : block.constDecs) {
-			constDec.visit(this, null);
-		}
-		for (VarDec varDec : block.varDecs) {
-			varDec.visit(this, methodVisitor);
-		}
-		for (ProcDec procDec: block.procedureDecs) {
-			procDec.visit(this, null);
-		}
 		//add instructions from statement to method
 		block.statement.visit(this, arg);
 		methodVisitor.visitInsn(RETURN);
@@ -77,7 +49,7 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
 		// instead of ClassWriter.COMPUTE_FRAMES.  The result will not be a valid classfile,
 		// but you will be able to print it so you can see the instructions.  After fixing,
 		// restore ClassWriter.COMPUTE_FRAMES
-		classWriter.visit(V18, ACC_PUBLIC | ACC_SUPER, fullyQualifiedClassName, null, "java/lang/Object", null);
+		classWriter.visit(V16, ACC_PUBLIC | ACC_SUPER, fullyQualifiedClassName, null, "java/lang/Object", null);
 
 		//get a method visitor for the main method.		
 		MethodVisitor methodVisitor = classWriter.visitMethod(ACC_PUBLIC | ACC_STATIC, "main", "([Ljava/lang/String;)V", null, null);
@@ -123,12 +95,23 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
 
 	@Override
 	public Object visitStatementBlock(StatementBlock statementBlock, Object arg) throws PLPException {
-		throw new UnsupportedOperationException();
+		for (Statement s: statementBlock.statements) {
+			s.visit(this, arg);
+		}
+		return null;
 	}
 
 	@Override
 	public Object visitStatementIf(StatementIf statementIf, Object arg) throws PLPException {
-		throw new UnsupportedOperationException();
+		MethodVisitor mv = (MethodVisitor) arg;
+		statementIf.expression.visit(this, arg);
+		Label labelCompFalseBr = new Label();
+		// if expression is false then jump to the end label
+		mv.visitJumpInsn(IFEQ, labelCompFalseBr);
+		// executed only if expression true
+		statementIf.statement.visit(this, arg);
+		mv.visitLabel(labelCompFalseBr);
+		return null;
 	}
 
 	@Override
@@ -145,48 +128,55 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
 		case NUMBER -> {
 			expressionBinary.e0.visit(this, arg);
 			expressionBinary.e1.visit(this, arg);
+			// all operations are defined for number
 			switch (op) {
-			case PLUS -> mv.visitInsn(IADD);
-			case MINUS -> mv.visitInsn(ISUB);
-			case TIMES -> mv.visitInsn(IMUL);
-			case DIV -> mv.visitInsn(IDIV);
-			case MOD -> mv.visitInsn(IREM);
-			case EQ -> {
-				Label labelNumEqFalseBr = new Label();
-				mv.visitJumpInsn(IF_ICMPNE, labelNumEqFalseBr);
-				mv.visitInsn(ICONST_1);
-				Label labelPostNumEq = new Label();
-				mv.visitJumpInsn(GOTO, labelPostNumEq);
-				mv.visitLabel(labelNumEqFalseBr);
-				mv.visitInsn(ICONST_0);
-				mv.visitLabel(labelPostNumEq);
+				case PLUS -> mv.visitInsn(IADD);
+				case MINUS -> mv.visitInsn(ISUB);
+				case TIMES -> mv.visitInsn(IMUL);
+				case DIV -> mv.visitInsn(IDIV);
+				case MOD -> mv.visitInsn(IREM);
+				case EQ -> generateInstForComp(mv, IF_ICMPNE);
+				case NEQ -> generateInstForComp(mv, IF_ICMPEQ);
+				case LT -> generateInstForComp(mv, IF_ICMPGE);
+				case LE -> generateInstForComp(mv, IF_ICMPGT);
+				case GT -> generateInstForComp(mv, IF_ICMPLE);
+				case GE -> generateInstForComp(mv, IF_ICMPLT);
+				default -> throw new IllegalStateException("code gen bug in visitExpressionBinary NUMBER");
 			}
-			case NEQ -> {
-				throw new UnsupportedOperationException();
-			}
-			case LT -> {
-				throw new UnsupportedOperationException();
-			}
-			case LE -> {
-				throw new UnsupportedOperationException();
-			}
-			case GT -> {
-				throw new UnsupportedOperationException();
-			}
-			case GE -> {
-				throw new UnsupportedOperationException();
-			}
-			default -> {
-				throw new IllegalStateException("code gen bug in visitExpressionBinary NUMBER");
-			}
-			}
-			;
 		}
 		case BOOLEAN -> {
-			throw new UnsupportedOperationException();
+			expressionBinary.e0.visit(this, arg);
+			expressionBinary.e1.visit(this, arg);
+			// MINUS, DIV, and MOD are not defined for BOOLEAN
+			switch (op) {
+				case PLUS -> mv.visitInsn(IOR);
+				case TIMES -> mv.visitInsn(IAND);
+				case EQ -> generateInstForComp(mv, IF_ICMPNE);
+				case NEQ -> generateInstForComp(mv, IF_ICMPEQ);
+				case LT -> generateInstForComp(mv, IF_ICMPGE);
+				case LE -> generateInstForComp(mv, IF_ICMPGT);
+				case GT -> generateInstForComp(mv, IF_ICMPLE);
+				case GE -> generateInstForComp(mv, IF_ICMPLT);
+				default -> throw new IllegalStateException("code gen bug in visitExpressionBinary BOOLEAN");
+			}
 		}
 		case STRING -> {
-			throw new UnsupportedOperationException();
+			expressionBinary.e0.visit(this, arg);
+			expressionBinary.e1.visit(this, arg);
+			// MINUS, DIV, MOD, and TIMES are not defined for STRING
+			switch (op) {
+				case PLUS -> mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", "concat", "(Ljava/lang/String;)Ljava/lang/String;", false);
+				case EQ -> mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z", false);
+				case NEQ -> {
+					mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z", false);
+					generateInstForComp(mv, IFNE);
+				}
+				case LT -> generateInstForStringComp(mv, "startsWith", IAND);
+				case LE -> generateInstForStringComp(mv, "startsWith", IOR);
+				case GT -> generateInstForStringComp(mv, "endsWith", IAND);
+				case GE -> generateInstForStringComp(mv, "endsWith", IOR);
+				default -> throw new IllegalStateException("code gen bug in visitExpressionBinary STRING");
+			}
 		}
 		default -> {
 			throw new IllegalStateException("code gen bug in visitExpressionBinary");
@@ -209,12 +199,16 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
 
 	@Override
 	public Object visitExpressionStringLit(ExpressionStringLit expressionStringLit, Object arg) throws PLPException {
-		throw new UnsupportedOperationException();
+		MethodVisitor mv = (MethodVisitor)arg;
+		mv.visitLdcInsn(expressionStringLit.getFirstToken().getStringValue());
+		return null;
 	}
 
 	@Override
 	public Object visitExpressionBooleanLit(ExpressionBooleanLit expressionBooleanLit, Object arg) throws PLPException {
-		throw new UnsupportedOperationException();
+		MethodVisitor mv = (MethodVisitor)arg;
+		mv.visitLdcInsn(expressionBooleanLit.getFirstToken().getBooleanValue());
+		return null;
 	}
 
 	@Override
@@ -235,6 +229,46 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
 	@Override
 	public Object visitIdent(Ident ident, Object arg) throws PLPException {
 		throw new UnsupportedOperationException();
+	}
+
+	// have to give the opcode of the opposite compare instruction of the comparison that we want to do because the opposite compare instruction would be used to branch to a false condition
+	// i.e. if evaluation of OPCODE instruction is true then sets false otherwise sets true
+	public void generateInstForComp(MethodVisitor mv, int OPCODE) {
+		Label labelCompFalseBr = new Label();
+		mv.visitJumpInsn(OPCODE, labelCompFalseBr);
+		// corresponds to boolean true
+		mv.visitInsn(ICONST_1);
+		Label labelPostComp = new Label();
+		mv.visitJumpInsn(GOTO, labelPostComp);
+		mv.visitLabel(labelCompFalseBr);
+		// corresponds to boolean false
+		mv.visitInsn(ICONST_0);
+		mv.visitLabel(labelPostComp);
+	}
+
+	public void generateInstForStringComp(MethodVisitor mv, String methodName, int OPCODE) {
+		// store the strings to variable array for later use in checking equality
+		mv.visitVarInsn(ASTORE, 1);
+		mv.visitVarInsn(ASTORE, 2);
+		// load the strings to check for prefix
+		mv.visitVarInsn(ALOAD, 2);
+		mv.visitVarInsn(ALOAD, 1);
+		if (methodName.equals("startsWith")) {
+			// swap the two strings so that the string on top is the one on which startsWith is called
+			mv.visitInsn(SWAP);
+		}
+		mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", methodName, "(Ljava/lang/String;)Z", false);
+		// load the strings again to check for non equality
+		mv.visitVarInsn(ALOAD, 2);
+		mv.visitVarInsn(ALOAD, 1);
+		mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z", false);
+		// if method being called for LE or GE then need to check for equality, not non-equality of the strings, so negate the result only in case of LT and GT
+		if (OPCODE == IAND) {
+			generateInstForComp(mv, IFNE);
+		}
+		// based on the requirement, AND or OR the two boolean results from not equals and startsWith/endsWith
+		mv.visitInsn(OPCODE);
+		// can reduce the number of operations by invoking not equals check only if startsWith/endsWith is true
 	}
 
 }

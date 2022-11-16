@@ -29,7 +29,7 @@ public class CompilerComponentFactory {
         return new TypeInferenceVisitor();
     }
 
-    public static ASTVisitor getCodeGenVisitor(String packageName, String className, String sourceFileName) {
+    public static ASTVisitor getCodeGenVisitor(String className, String packageName, String sourceFileName) {
         return new CodeGenVisitor(className, packageName, sourceFileName);
     }
 

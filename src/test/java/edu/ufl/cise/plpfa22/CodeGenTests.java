@@ -345,11 +345,13 @@ public class CodeGenTests {
 				! "FALSE" < "FA";
 				! "FALSE" <= "FA";
 				! "FALSE" > "FA";
-				! "FALSE" >= "FA"	;
+				! "FALSE" >= "FA";
 				! "FA" < "FA";
 				! "FA" <= "FA";
 				! "FA" > "FA";
-				! "FA" >= "FA"					
+				! "FA" >= "FA";
+				! "TRUE FALSE" > "FALSE";
+				! "FALSE" < "FALSE TRUE"
 				END
 				.
 				""";
@@ -363,6 +365,25 @@ public class CodeGenTests {
 		String className = "edu.ufl.cise.plpfa22.prog";
 		loadClassAndRunMethod(bytecode, className, "main", args);		
 	}
+
+	@DisplayName("stringTest")
+	@Test
+	public void stringTest(TestInfo testInfo) throws Exception {
+		String input = """
+    			IF "john" < "john doe" THEN ! "YES"
+				.
+				""";
+
+		String shortClassName = "prog";
+		String JVMpackageName = "edu/ufl/cise/plpfa22";
+		byte[] bytecode = compile(input, shortClassName, JVMpackageName);
+		show(CodeGenUtils.bytecodeToString(bytecode));
+
+		Object[] args = new Object[1];
+		String className = "edu.ufl.cise.plpfa22.prog";
+		loadClassAndRunMethod(bytecode, className, "main", args);
+	}
+
 	
 	}
 
