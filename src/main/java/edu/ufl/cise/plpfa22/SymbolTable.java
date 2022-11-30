@@ -4,7 +4,7 @@ import edu.ufl.cise.plpfa22.ast.Declaration;
 
 import java.util.*;
 
-public class SymbolTable {
+public class SymbolTable <T> {
     private final Map<String, List<SymbolTableEntry>> table;
     private final LinkedList<String> scopeStack;
     private int currentNestLevel;
@@ -41,23 +41,23 @@ public class SymbolTable {
         currentNestLevel--;
     }
 
-    public int insert(final String name, final Declaration declaration) {
+    public int insert(final String name, final T data) {
         table.putIfAbsent(name, new ArrayList<>());
         final List<SymbolTableEntry> entries = table.get(name);
         final String scopeId = scopeStack.peek();
         if (entries.stream().anyMatch(e -> e.scopeId.equals(scopeId))) {
             return -1;
         }
-        entries.add(new SymbolTableEntry(declaration, scopeId));
+        entries.add(new SymbolTableEntry(data, scopeId));
         return currentNestLevel;
     }
 
-    public Declaration find(final String name) {
+    public T find(final String name) {
         for (String scopeId : scopeStack) {
             if (table.containsKey(name)) {
                 final SymbolTableEntry found = table.get(name).stream().filter(e -> scopeId.equals(e.scopeId)).findFirst().orElse(null);
                 if (found != null) {
-                    return found.declaration;
+                    return found.data;
                 }
             }
 
@@ -65,12 +65,12 @@ public class SymbolTable {
         return null;
     }
 
-    private static class SymbolTableEntry {
-        private final Declaration declaration;
+    private class SymbolTableEntry {
+        private final T data;
         private final String scopeId;
 
-        private SymbolTableEntry(Declaration declaration, String scopeId) {
-            this.declaration = declaration;
+        private SymbolTableEntry(T data, String scopeId) {
+            this.data = data;
             this.scopeId = scopeId;
         }
     }

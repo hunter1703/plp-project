@@ -6,11 +6,11 @@ import java.util.Collections;
 import java.util.List;
 
 public class ScopeVisitor implements ASTVisitor {
-    private final SymbolTable symbolTable;
+    private final SymbolTable<Declaration> symbolTable;
     private int nestLevel;
 
     public ScopeVisitor() {
-        this.symbolTable = new SymbolTable();
+        this.symbolTable = new SymbolTable<>();
         this.nestLevel = -1;
     }
 
