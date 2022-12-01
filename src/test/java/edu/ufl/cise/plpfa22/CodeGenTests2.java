@@ -74,6 +74,7 @@ public class CodeGenTests2 {
 	}
 
 	private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+	private final PrintStream originalOut = System.out;
 
 	static boolean VERBOSE = true;
 	void show(Object o) {
@@ -687,7 +688,7 @@ public class CodeGenTests2 {
 				10
 				""";
 		assertEquals(expected, outContent.toString());
-		System.setOut(System.out);
+		System.setOut(originalOut);
 	}
 	@DisplayName("inputString")
 	@Test
@@ -713,7 +714,7 @@ public class CodeGenTests2 {
     			world
     			""";
 		assertEquals(expected, outContent.toString());
-		System.setOut(System.out);
+		System.setOut(originalOut);
 	}
 
 	@DisplayName("inputBoolean")
@@ -740,7 +741,7 @@ public class CodeGenTests2 {
     			true
     			""";
 		assertEquals(expected, outContent.toString());
-		System.setOut(System.out);
+		System.setOut(originalOut);
 	}
 
 }
