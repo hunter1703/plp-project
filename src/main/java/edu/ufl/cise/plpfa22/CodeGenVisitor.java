@@ -142,9 +142,28 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
 
         final MethodVisitor constructor = procedureWriter.visitMethod(0, "<init>", "(" + toJVMClassDesc(superClassName) + ")V", null, null);
         constructor.visitCode();
-        constructor.visitVarInsn(ALOAD, 0);
-        constructor.visitVarInsn(ALOAD, 1);
-        constructor.visitFieldInsn(PUTFIELD, className, owner + "$0", toJVMClassDesc(superClassName));
+
+        final int numCLasses = classNameStack.size();
+        constructor.visitVarInsn(ALOAD, 0); //this
+        constructor.visitVarInsn(ALOAD, 1); //this.parent
+        constructor.visitFieldInsn(PUTFIELD, className, owner + "$" + (numCLasses - 1), toJVMClassDesc(classNameStack.get(numCLasses - 1)));
+
+        for (int i = numCLasses - 2; i >= 0; i--) {
+            constructor.visitVarInsn(ALOAD, 0); //this
+
+            constructor.visitVarInsn(ALOAD, 0); //this
+            constructor.visitFieldInsn(GETFIELD, className, owner + "$" + (i + 1), toJVMClassDesc(classNameStack.get(i + 1))); //(i + 1)^th parent
+
+
+            if (i >= 1) {
+                final String ownerThis = "$this".repeat(i).substring(1);
+                constructor.visitFieldInsn(GETFIELD, classNameStack.get(i + 1), ownerThis + "$0", toJVMClassDesc(classNameStack.get(i))); //i^th parent
+            } else {
+                constructor.visitFieldInsn(GETFIELD, classNameStack.get(i + 1), "this$0", toJVMClassDesc(classNameStack.get(i))); //i^th parent
+            }
+
+            constructor.visitFieldInsn(PUTFIELD, className, owner + "$" + i, toJVMClassDesc(classNameStack.get(i)));
+        }
         constructor.visitVarInsn(ALOAD, 0);
         constructor.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
         constructor.visitInsn(RETURN);
