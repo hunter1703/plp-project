@@ -272,6 +272,19 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
 
     @Override
     public Object visitStatementWhile(StatementWhile statementWhile, Object arg) throws PLPException {
+        final List<Object> args = (List<Object>) arg;
+        final MethodVisitor mv = (MethodVisitor) args.get(0);
+        final String className = (String) args.get(1);
+        final Label labelWhile = new Label();
+        mv.visitLabel(labelWhile);
+        statementWhile.expression.visit(this, Arrays.asList(mv, className));
+        final Label labelCompFalseBr = new Label();
+        // if expression is false then jump to the end label
+        mv.visitJumpInsn(IFEQ, labelCompFalseBr);
+        // executed only if expression true
+        statementWhile.statement.visit(this, arg);
+        mv.visitJumpInsn(GOTO, labelWhile);
+        mv.visitLabel(labelCompFalseBr);
         return null;
     }
 
