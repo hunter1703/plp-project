@@ -231,6 +231,27 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
 
     @Override
     public Object visitStatementInput(StatementInput statementInput, Object arg) throws PLPException {
+        final List<Object> args = (List<Object>) arg;
+        final MethodVisitor mv = (MethodVisitor) args.get(0);
+        final String className = (String) args.get(1);
+        final String name = statementInput.ident.getFirstToken().getStringValue();
+        final Type type = statementInput.ident.getDec().getType();
+        mv.visitVarInsn(ALOAD, 0);
+        mv.visitTypeInsn(NEW, "java/util/Scanner");
+        mv.visitInsn(DUP);
+        mv.visitFieldInsn(GETSTATIC, "java/lang/System", "in", "Ljava/io/InputStream;");
+        mv.visitMethodInsn(INVOKESPECIAL, "java/util/Scanner", "<init>", "(Ljava/io/InputStream;)V", false);
+        if (type.equals(Type.STRING)) {
+            mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/Scanner", "nextLine", "()Ljava/lang/String;", false);
+        } else if (type.equals(Type.NUMBER)) {
+            mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/Scanner", "nextInt", "()I", false);
+        } else {
+            mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/Scanner", "nextLine", "()Ljava/lang/String;", false);
+            mv.visitLdcInsn("TRUE");
+            mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z", false);
+        }
+        //update value
+        mv.visitFieldInsn(PUTFIELD, className, name, type == NUMBER ? "I" : (type == BOOLEAN ? "Z" : "Ljava/lang/String;"));
         return null;
     }
 

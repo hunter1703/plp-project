@@ -4,6 +4,9 @@
 
 package edu.ufl.cise.plpfa22;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.util.LinkedList;
 import java.util.List;
@@ -16,6 +19,8 @@ import edu.ufl.cise.plpfa22.CodeGenUtils.DynamicClassLoader;
 import edu.ufl.cise.plpfa22.CodeGenUtils.GenClass;
 import edu.ufl.cise.plpfa22.ast.ASTNode;
 import edu.ufl.cise.plpfa22.ast.PrettyPrintVisitor;
+
+import static org.junit.Assert.assertEquals;
 
 public class CodeGenTests2 {
 
@@ -68,6 +73,7 @@ public class CodeGenTests2 {
 		return m.invoke(null, args);
 	}
 
+	private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
 
 	static boolean VERBOSE = true;
 	void show(Object o) {
@@ -655,9 +661,87 @@ public class CodeGenTests2 {
 		Object[] args = new Object[1];  
 		String className = "edu.ufl.cise.plpfa22.prog";
 		loadClassesAndRunMain(classes, className);		
-	}	
-	
+	}
 
+	@DisplayName("inputInt")
+	@Test
+	public void inputInt(TestInfo testInfo) throws Exception{
+		String input = """
+				CONST a = 3;
+				VAR x;
+				BEGIN
+				x := a;
+				?x;
+				!x
+				END
+				.
+				""";
+		String shortClassName = "prog";
+		String JVMpackageName = "edu/ufl/cise/plpfa22";
+		List<GenClass> classes = compile(input, shortClassName, JVMpackageName);
+		String className = "edu.ufl.cise.plpfa22.prog";
+		System.setIn(new ByteArrayInputStream("10".getBytes()));
+		System.setOut(new PrintStream(outContent));
+		loadClassesAndRunMain(classes, className);
+		String expected = """
+				10
+				""";
+		assertEquals(expected, outContent.toString());
+		System.setOut(System.out);
+	}
+	@DisplayName("inputString")
+	@Test
+	public void inputString(TestInfo testInfo) throws Exception{
+		String input = """
+				CONST a = "hello";
+				VAR x;
+				BEGIN
+				x := a;
+				?x;
+				!x
+				END
+				.
+				""";
+		String shortClassName = "prog";
+		String JVMpackageName = "edu/ufl/cise/plpfa22";
+		List<GenClass> classes = compile(input, shortClassName, JVMpackageName);
+		String className = "edu.ufl.cise.plpfa22.prog";
+		System.setIn(new ByteArrayInputStream("world".getBytes()));
+		System.setOut(new PrintStream(outContent));
+		loadClassesAndRunMain(classes, className);
+		String expected = """
+    			world
+    			""";
+		assertEquals(expected, outContent.toString());
+		System.setOut(System.out);
+	}
+
+	@DisplayName("inputBoolean")
+	@Test
+	public void inputBoolean(TestInfo testInfo) throws Exception{
+		String input = """
+				CONST a = FALSE;
+				VAR x;
+				BEGIN
+				x := a;
+				?x;
+				!x
+				END
+				.
+				""";
+		String shortClassName = "prog";
+		String JVMpackageName = "edu/ufl/cise/plpfa22";
+		List<GenClass> classes = compile(input, shortClassName, JVMpackageName);
+		String className = "edu.ufl.cise.plpfa22.prog";
+		System.setIn(new ByteArrayInputStream("TRUE".getBytes()));
+		System.setOut(new PrintStream(outContent));
+		loadClassesAndRunMain(classes, className);
+		String expected = """
+    			true
+    			""";
+		assertEquals(expected, outContent.toString());
+		System.setOut(System.out);
+	}
 
 }
 
