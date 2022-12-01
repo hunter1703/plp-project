@@ -7,24 +7,22 @@ import edu.ufl.cise.plpfa22.ast.Types.Type;
 
 import java.lang.reflect.Array;
 import java.util.*;
+import java.util.stream.Collectors;
 
-import static edu.ufl.cise.plpfa22.CodeGenUtils.toJMVClassName;
-import static edu.ufl.cise.plpfa22.CodeGenUtils.toJVMClassDesc;
+import static edu.ufl.cise.plpfa22.CodeGenUtils.*;
 import static edu.ufl.cise.plpfa22.ast.Types.Type.*;
 
 public class CodeGenVisitor implements ASTVisitor, Opcodes {
 
     final String packageName;
-    final String className;
     final String sourceFileName;
     final String fullyQualifiedClassName;
-    final List<CodeGenUtils.GenClass> classes = new ArrayList<>();
+    final ArrayList<String> classNameStack = new ArrayList<>();
 
 
     public CodeGenVisitor(String className, String packageName, String sourceFileName) {
         super();
         this.packageName = packageName;
-        this.className = className;
         this.sourceFileName = sourceFileName;
         this.fullyQualifiedClassName = packageName + "/" + className;
     }
@@ -56,10 +54,22 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
         mainVisitor.visitMaxs(0, 0);
         mainVisitor.visitEnd();
 
-        program.block.visit(this, Arrays.asList(classWriter, fullyQualifiedClassName, "this"));
+        classNameStack.add(fullyQualifiedClassName);
+        final List<Tuple<ClassWriter, String>> subClasses = (List<Tuple<ClassWriter, String>>) program.block.visit(this, Arrays.asList(classWriter, fullyQualifiedClassName, "this"));
         classWriter.visitEnd();
-        classes.add(new CodeGenUtils.GenClass(fullyQualifiedClassName, classWriter.toByteArray()));
-        return classes;
+        final List<Tuple<ClassWriter, String>> classes = new ArrayList<>();
+        classes.add(new Tuple<>(classWriter, fullyQualifiedClassName));
+        classes.addAll(subClasses);
+
+        final List<String> allClassNames = classes.stream().map(t -> t.second).collect(Collectors.toList());
+        final List<GenClass> genClasses = new ArrayList<>();
+        for (final Tuple<ClassWriter, String> tuple : classes) {
+            final ClassWriter subClassWriter = tuple.first;
+//            allClassNames.forEach(subClassWriter::visitNestMember);
+            subClassWriter.visitEnd();
+            genClasses.add(new GenClass(tuple.second, subClassWriter.toByteArray()));
+        }
+        return genClasses;
     }
 
     @Override
@@ -84,22 +94,23 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
             dec.visit(this, blockWriter);
         }
 
+        final List<Tuple<ClassWriter, String>> allClasses = new ArrayList<>();
         for (final ProcDec dec : nullSafeList(procedureDecs)) {
-            dec.visit(this, Arrays.asList(owner, className, blockWriter));
+            allClasses.addAll((Collection<? extends Tuple<ClassWriter, String>>) dec.visit(this, Arrays.asList(owner, className)));
         }
 
         block.statement.visit(this, Arrays.asList(runVisitor, className));
         runVisitor.visitInsn(RETURN);
         runVisitor.visitMaxs(0, 0);
         runVisitor.visitEnd();
-        return null;
+        return allClasses;
     }
 
     @Override
     public Object visitConstDec(ConstDec constDec, Object arg) throws PLPException {
         final ClassWriter blockWriter = (ClassWriter) arg;
         final Type type = constDec.getType();
-        blockWriter.visitField(ACC_PUBLIC | ACC_STATIC | ACC_FINAL, constDec.ident.getStringValue(), type == NUMBER ? "I" : (type == BOOLEAN ? "Z" : "Ljava/lang/String;"), null, constDec.val).visitEnd();
+        blockWriter.visitField(ACC_PUBLIC | ACC_FINAL, constDec.ident.getStringValue(), type == NUMBER ? "I" : (type == BOOLEAN ? "Z" : "Ljava/lang/String;"), null, constDec.val).visitEnd();
         return null;
     }
 
@@ -117,19 +128,17 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
         final List<Object> args = (List<Object>) arg;
         final String owner = (String) args.get(0);
         final String superClassName = (String) args.get(1);
-        final ClassWriter currentClassWriter = (ClassWriter) args.get(2);
         final String procedureName = procDec.ident.getStringValue();
 
         final String className = superClassName + "$" + procedureName;
         procedureWriter.visit(V16, ACC_PUBLIC | ACC_SUPER, className, null, "java/lang/Object", new String[]{"java/lang/Runnable"});
 
-
-        currentClassWriter.visitNestMember(className);
-
-        procedureWriter.visitNestHost(superClassName);
+        procedureWriter.visitNestHost(fullyQualifiedClassName);
         procedureWriter.visitInnerClass(className, superClassName, procedureName, 0);
 
-        procedureWriter.visitField(ACC_FINAL | ACC_SYNTHETIC, owner + "$0", toJVMClassDesc(superClassName), null, null).visitEnd();
+        for (int i = 0; i < classNameStack.size(); i++) {
+            procedureWriter.visitField(ACC_FINAL | ACC_SYNTHETIC, owner + "$" + i, toJVMClassDesc(classNameStack.get(i)), null, null).visitEnd();
+        }
 
         final MethodVisitor constructor = procedureWriter.visitMethod(0, "<init>", "(" + toJVMClassDesc(superClassName) + ")V", null, null);
         constructor.visitCode();
@@ -142,10 +151,16 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
         constructor.visitMaxs(0, 0);
         constructor.visitEnd();
 
-        procDec.block.visit(this, Arrays.asList(procedureWriter, className, owner + "$this"));
+        classNameStack.add(className);
+        final List<Tuple<ClassWriter, String>> subClasses = (List<Tuple<ClassWriter, String>>) procDec.block.visit(this, Arrays.asList(procedureWriter, className, owner + "$this"));
+        final List<Tuple<ClassWriter, String>> allClasses = new ArrayList<>();
+        allClasses.add(new Tuple<>(procedureWriter, className));
+        allClasses.addAll(subClasses);
+
         procedureWriter.visitEnd();
-        classes.add(new CodeGenUtils.GenClass(className, procedureWriter.toByteArray()));
-        return null;
+
+        classNameStack.remove(classNameStack.size() - 1);
+        return allClasses;
     }
 
     @Override
@@ -156,24 +171,41 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
         //evaluate the expression
         statementAssign.expression.visit(this, Arrays.asList(mv, className));
 
+        final int level = statementAssign.ident.getDec().getNest();
+        final String ownerClassName = classNameStack.get(level);
         final String name = statementAssign.ident.getFirstToken().getStringValue();
         final Type type = statementAssign.expression.getType();
+
+        mv.visitVarInsn(ALOAD, 0);
+        if (classNameStack.size() != level + 1) {
+            mv.visitFieldInsn(GETFIELD, className, "this$" + level, toJVMClassDesc(ownerClassName));
+        }
+        mv.visitInsn(SWAP);
         //update value
-        mv.visitFieldInsn(PUTFIELD, className, name, type == NUMBER ? "I" : (type == BOOLEAN ? "Z" : "Ljava/lang/String;"));
+        mv.visitFieldInsn(PUTFIELD, ownerClassName, name, type == NUMBER ? "I" : (type == BOOLEAN ? "Z" : "Ljava/lang/String;"));
         return null;
     }
 
     @Override
     public Object visitStatementCall(StatementCall statementCall, Object arg) throws PLPException {
-        final String name = statementCall.ident.getFirstToken().getStringValue();
+        final String calledProcedure = statementCall.ident.getFirstToken().getStringValue();
         final List<Object> args = (List<Object>) arg;
         final MethodVisitor mv = (MethodVisitor) args.get(0);
-        final String className = (String) args.get(1);
-        final String subClassName = className + "$" + name;
+        final String currClassName = (String) args.get(1);
+
+        final int level = statementCall.ident.getDec().getNest();
+        final String ownerClassName = classNameStack.get(level);
+
+        final String subClassName = ownerClassName + "$" + calledProcedure;
         mv.visitTypeInsn(NEW, subClassName);
         mv.visitInsn(DUP);
+
         mv.visitVarInsn(ALOAD, 0);
-        mv.visitMethodInsn(INVOKESPECIAL, subClassName, "<init>", "(" + toJVMClassDesc(className) + ")V", false);
+        if (classNameStack.size() != level + 1) {
+            mv.visitFieldInsn(GETFIELD, currClassName, "this$" + level, toJVMClassDesc(ownerClassName));
+        }
+
+        mv.visitMethodInsn(INVOKESPECIAL, subClassName, "<init>", "(" + toJVMClassDesc(ownerClassName) + ")V", false);
         mv.visitMethodInsn(INVOKEVIRTUAL, subClassName, "run", "()V", false);
         return null;
     }
@@ -301,10 +333,18 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
         final MethodVisitor mv = (MethodVisitor) args.get(0);
         final String className = (String) args.get(1);
 
-        final IToken token = expressionIdent.getFirstToken();
-        final String name = token.getStringValue();
+        final int level = expressionIdent.getDec().getNest();
+        final String ownerClassName = classNameStack.get(level);
+        final String name = expressionIdent.getFirstToken().getStringValue();
         final Type type = expressionIdent.getType();
-        mv.visitFieldInsn(GETFIELD, className, name, type == NUMBER ? "I" : (type == BOOLEAN ? "Z" : "Ljava/lang/String;"));
+
+        //load reference of enclosing class
+        mv.visitVarInsn(ALOAD, 0);
+        if (classNameStack.size() != level + 1) {
+            mv.visitFieldInsn(GETFIELD, className, "this$" + level, toJVMClassDesc(ownerClassName));
+        }
+        //load field value on to the stack
+        mv.visitFieldInsn(GETFIELD, ownerClassName, name, type == NUMBER ? "I" : (type == BOOLEAN ? "Z" : "Ljava/lang/String;"));
         return null;
     }
 
@@ -334,7 +374,7 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
 
     @Override
     public Object visitIdent(Ident ident, Object arg) throws PLPException {
-        return null;
+        throw new PLPException("Visitor should not reach here");
     }
 
     // have to give the opcode of the opposite compare instruction of the comparison that we want to do because the opposite compare instruction would be used to branch to a false condition
@@ -382,5 +422,15 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
             return Collections.emptyList();
         }
         return list;
+    }
+
+    private static class Tuple<F, S> {
+        private final F first;
+        private final S second;
+
+        private Tuple(F f, S s) {
+            this.first = f;
+            this.second = s;
+        }
     }
 }
