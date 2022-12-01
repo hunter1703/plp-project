@@ -510,17 +510,23 @@ public class CodeGenTests2 {
 		loadClassesAndRunMain(classes, className);		
 	}
 
-	@DisplayName("temp")
+	@DisplayName("var4")
 	@Test
-	public void temp(TestInfo testInfo) throws Exception{
+	public void var4(TestInfo testInfo) throws Exception{
 		String input = """
-				VAR a;
+				VAR a,b,c;
 				PROCEDURE p;
 					PROCEDURE q;
-						BEGIN
-						a := 42;
-						!a;
-						END;				
+						PROCEDURE r;
+							BEGIN
+							a := 42;
+							b := "hello";
+							c := TRUE;
+							!a;
+							!b;
+							!c
+							END;	
+						CALL r;			
 					CALL q;
 				CALL p
 				.  

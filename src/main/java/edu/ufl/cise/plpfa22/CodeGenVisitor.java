@@ -55,21 +55,13 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
         mainVisitor.visitEnd();
 
         classNameStack.add(fullyQualifiedClassName);
-        final List<Tuple<ClassWriter, String>> subClasses = (List<Tuple<ClassWriter, String>>) program.block.visit(this, Arrays.asList(classWriter, fullyQualifiedClassName, "this"));
+        final List<GenClass> subClasses = (List<GenClass>) program.block.visit(this, Arrays.asList(classWriter, fullyQualifiedClassName, "this"));
         classWriter.visitEnd();
-        final List<Tuple<ClassWriter, String>> classes = new ArrayList<>();
-        classes.add(new Tuple<>(classWriter, fullyQualifiedClassName));
-        classes.addAll(subClasses);
+        final List<GenClass> allClasses = new ArrayList<>();
+        allClasses.add(new GenClass(fullyQualifiedClassName, classWriter.toByteArray()));
+        allClasses.addAll(subClasses);
 
-        final List<String> allClassNames = classes.stream().map(t -> t.second).collect(Collectors.toList());
-        final List<GenClass> genClasses = new ArrayList<>();
-        for (final Tuple<ClassWriter, String> tuple : classes) {
-            final ClassWriter subClassWriter = tuple.first;
-//            allClassNames.forEach(subClassWriter::visitNestMember);
-            subClassWriter.visitEnd();
-            genClasses.add(new GenClass(tuple.second, subClassWriter.toByteArray()));
-        }
-        return genClasses;
+        return allClasses;
     }
 
     @Override
@@ -77,7 +69,6 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
         final List<Object> args = (List<Object>) arg;
         final ClassWriter blockWriter = (ClassWriter) args.get(0);
         final String className = (String) args.get(1);
-        final String owner = (String) args.get(2);
         final MethodVisitor runVisitor = blockWriter.visitMethod(ACC_PUBLIC, "run", "()V", null, null);
 
         runVisitor.visitCode();
@@ -94,9 +85,9 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
             dec.visit(this, blockWriter);
         }
 
-        final List<Tuple<ClassWriter, String>> allClasses = new ArrayList<>();
+        final List<GenClass> allClasses = new ArrayList<>();
         for (final ProcDec dec : nullSafeList(procedureDecs)) {
-            allClasses.addAll((Collection<? extends Tuple<ClassWriter, String>>) dec.visit(this, Arrays.asList(owner, className)));
+            allClasses.addAll((Collection<? extends GenClass>) dec.visit(this, className));
         }
 
         block.statement.visit(this, Arrays.asList(runVisitor, className));
@@ -125,9 +116,7 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
     @Override
     public Object visitProcedure(ProcDec procDec, Object arg) throws PLPException {
         final ClassWriter procedureWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
-        final List<Object> args = (List<Object>) arg;
-        final String owner = (String) args.get(0);
-        final String superClassName = (String) args.get(1);
+        final String superClassName = (String) arg;
         final String procedureName = procDec.ident.getStringValue();
 
         final String className = superClassName + "$" + procedureName;
@@ -137,33 +126,22 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
         procedureWriter.visitInnerClass(className, superClassName, procedureName, 0);
 
         for (int i = 0; i < classNameStack.size(); i++) {
-            procedureWriter.visitField(ACC_FINAL | ACC_SYNTHETIC, owner + "$" + i, toJVMClassDesc(classNameStack.get(i)), null, null).visitEnd();
+            procedureWriter.visitField(ACC_FINAL | ACC_SYNTHETIC, "this$" + i, toJVMClassDesc(classNameStack.get(i)), null, null).visitEnd();
         }
 
         final MethodVisitor constructor = procedureWriter.visitMethod(0, "<init>", "(" + toJVMClassDesc(superClassName) + ")V", null, null);
         constructor.visitCode();
 
         final int numCLasses = classNameStack.size();
-        constructor.visitVarInsn(ALOAD, 0); //this
-        constructor.visitVarInsn(ALOAD, 1); //this.parent
-        constructor.visitFieldInsn(PUTFIELD, className, owner + "$" + (numCLasses - 1), toJVMClassDesc(classNameStack.get(numCLasses - 1)));
-
-        for (int i = numCLasses - 2; i >= 0; i--) {
+        for (int i = numCLasses - 1; i >= 0; i--) {
             constructor.visitVarInsn(ALOAD, 0); //this
-
-            constructor.visitVarInsn(ALOAD, 0); //this
-            constructor.visitFieldInsn(GETFIELD, className, owner + "$" + (i + 1), toJVMClassDesc(classNameStack.get(i + 1))); //(i + 1)^th parent
-
-
-            if (i >= 1) {
-                final String ownerThis = "$this".repeat(i).substring(1);
-                constructor.visitFieldInsn(GETFIELD, classNameStack.get(i + 1), ownerThis + "$0", toJVMClassDesc(classNameStack.get(i))); //i^th parent
-            } else {
-                constructor.visitFieldInsn(GETFIELD, classNameStack.get(i + 1), "this$0", toJVMClassDesc(classNameStack.get(i))); //i^th parent
+            constructor.visitVarInsn(ALOAD, 1);
+            for (int j = 1; j < numCLasses - i; j++) {
+                constructor.visitFieldInsn(GETFIELD, classNameStack.get(numCLasses - j), "this$0", toJVMClassDesc(classNameStack.get(numCLasses - j - 1))); //(i + 1)^th parent
             }
-
-            constructor.visitFieldInsn(PUTFIELD, className, owner + "$" + i, toJVMClassDesc(classNameStack.get(i)));
+            constructor.visitFieldInsn(PUTFIELD, className, "this$" + i, toJVMClassDesc(classNameStack.get(i)));
         }
+
         constructor.visitVarInsn(ALOAD, 0);
         constructor.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
         constructor.visitInsn(RETURN);
@@ -171,12 +149,12 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
         constructor.visitEnd();
 
         classNameStack.add(className);
-        final List<Tuple<ClassWriter, String>> subClasses = (List<Tuple<ClassWriter, String>>) procDec.block.visit(this, Arrays.asList(procedureWriter, className, owner + "$this"));
-        final List<Tuple<ClassWriter, String>> allClasses = new ArrayList<>();
-        allClasses.add(new Tuple<>(procedureWriter, className));
-        allClasses.addAll(subClasses);
+        final List<GenClass> subClasses = (List<GenClass>) procDec.block.visit(this, Arrays.asList(procedureWriter, className));
+        final List<GenClass> allClasses = new ArrayList<>();
 
         procedureWriter.visitEnd();
+        allClasses.add(new GenClass(className, procedureWriter.toByteArray()));
+        allClasses.addAll(subClasses);
 
         classNameStack.remove(classNameStack.size() - 1);
         return allClasses;
