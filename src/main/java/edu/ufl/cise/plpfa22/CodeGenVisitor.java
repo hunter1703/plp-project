@@ -40,6 +40,13 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
         constructor.visitCode();
         constructor.visitVarInsn(ALOAD, 0);
         constructor.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+        final List<ConstDec> constDecs = program.block.constDecs;
+        for (final ConstDec dec : constDecs) {
+            constructor.visitVarInsn(ALOAD, 0);
+            constructor.visitLdcInsn(dec.val);
+            final Type type = dec.getType();
+            constructor.visitFieldInsn(PUTFIELD, fullyQualifiedClassName, dec.ident.getStringValue(), type == NUMBER ? "I" : (type == BOOLEAN ? "Z" : "Ljava/lang/String;"));
+        }
         constructor.visitInsn(RETURN);
         constructor.visitMaxs(0, 0);
         constructor.visitEnd();
@@ -144,6 +151,13 @@ public class CodeGenVisitor implements ASTVisitor, Opcodes {
 
         constructor.visitVarInsn(ALOAD, 0);
         constructor.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+        final List<ConstDec> constDecs = procDec.block.constDecs;
+        for (final ConstDec dec : constDecs) {
+            constructor.visitVarInsn(ALOAD, 0);
+            constructor.visitLdcInsn(dec.val);
+            final Type type = dec.getType();
+            constructor.visitFieldInsn(PUTFIELD, className, dec.ident.getStringValue(), type == NUMBER ? "I" : (type == BOOLEAN ? "Z" : "Ljava/lang/String;"));
+        }
         constructor.visitInsn(RETURN);
         constructor.visitMaxs(0, 0);
         constructor.visitEnd();
